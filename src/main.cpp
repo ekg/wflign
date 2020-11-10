@@ -7,7 +7,7 @@ int main(int argc, char** argv) {
     std::string queries(argv[1]);
     std::string targets(argv[2]);
     uint64_t segment_length = std::stoi(argv[3]);
-    std::cout << "query.name" << "\t" << "target.name" << "\t" << "x" << "\t" << "y" << "\t" << "edit.dist" << "\t" << "identity" << "\n";
+    //std::cout << "query.name" << "\t" << "target.name" << "\t" << "x" << "\t" << "y" << "\t" << "edit.dist" << "\t" << "identity" << "\n";
     seqiter::for_each_seq_in_file(
         queries,
         [&](const std::string& qname,
