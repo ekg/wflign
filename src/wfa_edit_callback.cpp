@@ -110,6 +110,7 @@ int edit_wavefronts_backtrace(
     wavefronts->edit_cigar[edit_cigar_idx++] = 'M';
     --offset;
   }
+  //std::cerr << std::endl;
   // Return CIGAR length
   return edit_cigar_idx;
 }
@@ -119,7 +120,8 @@ int edit_wavefronts_backtrace(
  */
 void edit_wavefronts_extend_wavefront(
     edit_wavefronts_t* const wavefronts,
-    const std::function<bool(int&,int&,int&)>& extend_match,
+    //const std::function<bool(int&,int&,int&)>& extend_match,
+    const std::function<bool(int&,int&,int&,const int&)>& extend_match,
     const int pattern_length,
     const int text_length,
     const int distance) {
@@ -133,7 +135,7 @@ void edit_wavefronts_extend_wavefront(
   for (k=k_min;k<=k_max;++k) {
     int v = EWAVEFRONT_V(k,offsets[k]);
     int h = EWAVEFRONT_H(k,offsets[k]);
-    while (v<pattern_length && h<text_length && extend_match(v,h,offsets[k]));
+    while (v<pattern_length && h<text_length && extend_match(v,h,offsets[k],distance));
     //pattern[v++]==text[h++]) {
         //++(offsets[k]);
     //}
@@ -186,7 +188,7 @@ void edit_wavefronts_compute_wavefront(
  */
 void edit_wavefronts_align(
     edit_wavefronts_t* const wavefronts,
-    const std::function<bool(int&,int&,int&)>& extend_match,
+    const std::function<bool(int&,int&,int&,const int&)>& extend_match,
     const int pattern_length,
     const int text_length) {
   // Parameters
@@ -200,6 +202,7 @@ void edit_wavefronts_align(
   wavefronts->wavefronts[0].offsets[0] = 0;
   // Compute wavefronts for increasing distance
   for (distance=0;distance<max_distance;++distance) {
+      //std::cerr << "distance is " << distance << std::endl;
     // Extend diagonally each wavefront point
     edit_wavefronts_extend_wavefront(
         wavefronts,extend_match,pattern_length,text_length,distance);

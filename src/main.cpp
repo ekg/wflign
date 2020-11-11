@@ -16,10 +16,10 @@ int main(int argc, char** argv) {
                 targets,
                 [&](const std::string& tname,
                     const std::string& tseq) {
-                    edlign::edlign_full(
+                    edlign::edlign_wavefront(
                         qname, qseq,
                         tname, tseq,
-                        segment_length);                    
+                        segment_length);
                 });
         });
     

@@ -8,44 +8,86 @@ void edlign_full(
         const std::string& target_name,
         const std::string& target,
         const uint64_t& segment_length) {
-    uint64_t target_step = segment_length / 2;
+    uint64_t target_step = segment_length / 20;
     uint64_t query_step = segment_length / 20;
     for (uint64_t i = 0; i < target.size() - segment_length - 1; i += target_step) {
         for (uint64_t j = 0; j < query.size() - segment_length - 1; j += query_step) {
-            do_alignment(query_name, query, j, target_name, target, i, segment_length, query_step);
+            do_alignment(query_name, query, j, target_name, target, i, segment_length, query_step, std::cout);
         }
         // do the last alignment in the row
-        do_alignment(query_name, query, query.size()-segment_length, target_name, target, i, segment_length, query_step);
+        do_alignment(query_name, query, query.size()-segment_length, target_name, target, i, segment_length, query_step, std::cout);
     }
     // do the last alignment in the final column
-    do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step);
+    do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step, std::cout);
 }
 
 void edlign_wavefront(
-        const std::string& query_name,
-        const std::string& query,
-        const std::string& target_name,
-        const std::string& target,
-        const uint64_t& segment_length) {
+    const std::string& query_name,
+    const std::string& query,
+    const std::string& target_name,
+    const std::string& target,
+    const uint64_t& segment_length) {
 
     // set up our implicit matrix
-    
-    uint64_t target_step = segment_length / 2;
-    uint64_t query_step = segment_length / 20;
-    /*
-    for (uint64_t i = 0; i < target.size() - segment_length - 1; i += target_step) {
-        for (uint64_t j = 0; j < query.size() - segment_length - 1; j += query_step) {
-            do_alignment(query_name, query, j, target_name, target, i, segment_length, query_step);
-        }
-        // do the last alignment in the row
-        do_alignment(query_name, query, query.size()-segment_length, target_name, target, i, segment_length, query_step);
-    }
-    // do the last alignment in the final column
-    do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step);
-    */
+    uint64_t steps_per_segment = 2;
+    uint64_t step_size = segment_length / steps_per_segment;
+
+    // Pattern & Text
+    const int pattern_length = query.size() / step_size - steps_per_segment;
+    const int text_length = target.size() / step_size - steps_per_segment;
+
+    //std::cerr << "running WFA on " << pattern_length << " x " << text_length << std::endl;
+    // Init Wavefronts
+    edit_wavefronts_t wavefronts;
+    edit_wavefronts_init(&wavefronts, pattern_length, text_length);
+    edit_wavefronts_clean(&wavefronts);
+    auto extend_match =
+        [&](int& v,
+            int& h,
+            int& offset,
+            const int& distance) {
+            bool aligned = do_alignment(
+                query_name,
+                query,
+                v * step_size,
+                target_name,
+                target,
+                h * step_size,
+                segment_length,
+                step_size,
+                std::cout);
+            std::cerr << "v/h" << "\t"
+                      << v << "\t"
+                      << h << "\t"
+                      << offset << "\t"
+                      << distance << "\t"
+                      << aligned << std::endl;
+            /*
+            if (aligned) {
+                v += steps_per_segment / 2;
+                h += steps_per_segment / 2;
+                offset += steps_per_segment / 2;
+            } else {
+                ++v;
+                ++h;
+            }
+            v = std::min(v, pattern_length);
+            h = std::min(h, text_length);
+            offset = std::min(offset, text_length);
+            */
+            ++v;
+            ++h;
+            if (aligned) ++offset;
+            return aligned;
+        };
+    edit_wavefronts_align(&wavefronts,
+                          extend_match,
+                          pattern_length,
+                          text_length);
+    // todo write the edit cigar, use this to bound the alignment
 }
 
-void do_alignment(
+bool do_alignment(
     const std::string& query_name,
     const std::string& query,
     const uint64_t& j,
@@ -53,9 +95,10 @@ void do_alignment(
     const std::string& target,
     const uint64_t& i,
     const uint64_t& segment_length,
-    const uint64_t& step_size) {
+    const uint64_t& step_size,
+    std::ostream& output) {
 
-    auto edlib_config = edlibNewAlignConfig(step_size * 1.618034,
+    auto edlib_config = edlibNewAlignConfig(step_size, // * 1.618034,
                                             EDLIB_MODE_NW,
                                             EDLIB_TASK_PATH,
                                             NULL, 0);
@@ -64,7 +107,7 @@ void do_alignment(
                                          target.c_str()+i, segment_length,
                                          edlib_config);
 
-    auto& output = std::cout;
+    bool aligned = false;
     //Output to file
     if (result.status == EDLIB_STATUS_OK
         && result.alignmentLength != 0
@@ -117,10 +160,12 @@ void do_alignment(
                << "\n";
 
         free(cigar);
+        aligned = true;
     }
 
     edlibFreeAlignResult(result);
 
+    return aligned;
 }
 
 char* alignmentToCigar(

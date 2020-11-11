@@ -22,15 +22,16 @@ void edlign_wavefront(
     const std::string& target,
     const uint64_t& segment_length);
 
-void do_alignment(
+bool do_alignment(
     const std::string& query_name,
     const std::string& query,
     const uint64_t& j,
-    const std::string& target,
     const std::string& target_name,
+    const std::string& target,
     const uint64_t& i,
     const uint64_t& segment_length,
-    const uint64_t& step_size);
+    const uint64_t& step_size,
+    std::ostream& output);
 
 char* alignmentToCigar(
     const unsigned char* const alignment,

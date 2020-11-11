@@ -26,6 +26,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <functional>
+#include <iostream>
 
 namespace edlign {
 
@@ -88,7 +89,7 @@ int edit_wavefronts_backtrace(
 
 void edit_wavefronts_extend_wavefront(
     edit_wavefronts_t* const wavefronts,
-    const std::function<bool(int&,int&,int&)>& extend_match,
+    const std::function<bool(int&,int&,int&,const int&)>& extend_match,
     const int pattern_length,
     const int text_length,
     const int distance);
@@ -101,7 +102,8 @@ void edit_wavefronts_compute_wavefront(
 
 void edit_wavefronts_align(
     edit_wavefronts_t* const wavefronts,
-    const std::function<bool(int&,int&,int&)>& extend_match,
+    const std::function<bool(int&,int&,int&,const int&)>& extend_match,
+    //const std::function<bool(int&,int&,int&)>& extend_match,
     const int pattern_length,
     const int text_length);
 
