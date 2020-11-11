@@ -14,6 +14,7 @@ add_subdirectory(deps/edlib EXCLUDE_FROM_ALL)
 add_executable(edlign
   src/main.cpp
   src/edlign.cpp
+  src/wfa_edit_callback.cpp
   )
 
 target_link_libraries(edlign

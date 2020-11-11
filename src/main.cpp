@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
                 targets,
                 [&](const std::string& tname,
                     const std::string& tseq) {
-                    edlign::edlign(
+                    edlign::edlign_full(
                         qname, qseq,
                         tname, tseq,
                         segment_length);                    

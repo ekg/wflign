@@ -2,13 +2,13 @@
 
 namespace edlign {
 
-void edlign(
+void edlign_full(
         const std::string& query_name,
         const std::string& query,
         const std::string& target_name,
         const std::string& target,
         const uint64_t& segment_length) {
-    uint64_t target_step = segment_length / 2; // / 1.1; //3034; // / 2; // / 1.618034;
+    uint64_t target_step = segment_length / 2;
     uint64_t query_step = segment_length / 20;
     for (uint64_t i = 0; i < target.size() - segment_length - 1; i += target_step) {
         for (uint64_t j = 0; j < query.size() - segment_length - 1; j += query_step) {
@@ -19,6 +19,30 @@ void edlign(
     }
     // do the last alignment in the final column
     do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step);
+}
+
+void edlign_wavefront(
+        const std::string& query_name,
+        const std::string& query,
+        const std::string& target_name,
+        const std::string& target,
+        const uint64_t& segment_length) {
+
+    // set up our implicit matrix
+    
+    uint64_t target_step = segment_length / 2;
+    uint64_t query_step = segment_length / 20;
+    /*
+    for (uint64_t i = 0; i < target.size() - segment_length - 1; i += target_step) {
+        for (uint64_t j = 0; j < query.size() - segment_length - 1; j += query_step) {
+            do_alignment(query_name, query, j, target_name, target, i, segment_length, query_step);
+        }
+        // do the last alignment in the row
+        do_alignment(query_name, query, query.size()-segment_length, target_name, target, i, segment_length, query_step);
+    }
+    // do the last alignment in the final column
+    do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step);
+    */
 }
 
 void do_alignment(

@@ -4,10 +4,18 @@
 #include <vector>
 #include <algorithm>
 #include "edlib.h"
+#include "wfa_edit_callback.hpp"
 
 namespace edlign {
 
-void edlign(
+void edlign_full(
+    const std::string& query_name,
+    const std::string& query,
+    const std::string& target_name,
+    const std::string& target,
+    const uint64_t& segment_length);
+
+void edlign_wavefront(
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
