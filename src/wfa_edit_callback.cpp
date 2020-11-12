@@ -120,8 +120,7 @@ int edit_wavefronts_backtrace(
  */
 void edit_wavefronts_extend_wavefront(
     edit_wavefronts_t* const wavefronts,
-    //const std::function<bool(int&,int&,int&)>& extend_match,
-    const std::function<bool(int&,int&,int&,const int&)>& extend_match,
+    const std::function<bool(const int&,const int&)>& extend_match,
     const int pattern_length,
     const int text_length,
     const int distance) {
@@ -135,10 +134,11 @@ void edit_wavefronts_extend_wavefront(
   for (k=k_min;k<=k_max;++k) {
     int v = EWAVEFRONT_V(k,offsets[k]);
     int h = EWAVEFRONT_H(k,offsets[k]);
-    while (v<pattern_length && h<text_length && extend_match(v,h,offsets[k],distance));
-    //pattern[v++]==text[h++]) {
-        //++(offsets[k]);
-    //}
+    while (v<pattern_length && h<text_length && extend_match(v++,h++)) {
+        ++(offsets[k]);
+        //std::cerr << v-1 << "\t" << h-1 << "\t" << distance << "\t" << "aligned" << std::endl;
+    }
+    //std::cerr << v << "\t" << h << "\t" << distance << "\t" << "unaligned" << std::endl;
   }
 }
 
@@ -188,7 +188,7 @@ void edit_wavefronts_compute_wavefront(
  */
 void edit_wavefronts_align(
     edit_wavefronts_t* const wavefronts,
-    const std::function<bool(int&,int&,int&,const int&)>& extend_match,
+    const std::function<bool(const int&,const int&)>& extend_match,
     const int pattern_length,
     const int text_length) {
   // Parameters

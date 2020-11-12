@@ -42,11 +42,9 @@ void edlign_wavefront(
     edit_wavefronts_init(&wavefronts, pattern_length, text_length);
     edit_wavefronts_clean(&wavefronts);
     auto extend_match =
-        [&](int& v,
-            int& h,
-            int& offset,
-            const int& distance) {
-            bool aligned = do_alignment(
+        [&](const int& v,
+            const int& h) {
+            return do_alignment(
                 query_name,
                 query,
                 v * step_size,
@@ -56,29 +54,6 @@ void edlign_wavefront(
                 segment_length,
                 step_size,
                 std::cout);
-            std::cerr << "v/h" << "\t"
-                      << v << "\t"
-                      << h << "\t"
-                      << offset << "\t"
-                      << distance << "\t"
-                      << aligned << std::endl;
-            /*
-            if (aligned) {
-                v += steps_per_segment / 2;
-                h += steps_per_segment / 2;
-                offset += steps_per_segment / 2;
-            } else {
-                ++v;
-                ++h;
-            }
-            v = std::min(v, pattern_length);
-            h = std::min(h, text_length);
-            offset = std::min(offset, text_length);
-            */
-            ++v;
-            ++h;
-            if (aligned) ++offset;
-            return aligned;
         };
     edit_wavefronts_align(&wavefronts,
                           extend_match,
@@ -98,7 +73,7 @@ bool do_alignment(
     const uint64_t& step_size,
     std::ostream& output) {
 
-    auto edlib_config = edlibNewAlignConfig(step_size, // * 1.618034,
+    auto edlib_config = edlibNewAlignConfig(step_size,
                                             EDLIB_MODE_NW,
                                             EDLIB_TASK_PATH,
                                             NULL, 0);
