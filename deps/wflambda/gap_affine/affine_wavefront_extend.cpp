@@ -208,9 +208,9 @@ void affine_wavefronts_extend_mwavefront_compute(
     int h = AFFINE_LAMBDA_WAVEFRONT_H(k,offset);
     while (lambda(v++,h++)) {
       ++(offsets[k]);
-      std::cerr << v-1 << "\t" << h-1 << "\t" << score << "\t" << "aligned" << std::endl;
+      //std::cerr << v-1 << "\t" << h-1 << "\t" << score << "\t" << "aligned" << std::endl;
     }
-    std::cerr << v << "\t" << h << "\t" << score << "\t" << "unaligned" << std::endl;
+    //std::cerr << v << "\t" << h << "\t" << score << "\t" << "unaligned" << std::endl;
   }
   // DEBUG
   affine_wavefronts_extend_mwavefront_epiloge(
