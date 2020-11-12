@@ -62,6 +62,140 @@ void edlign_wavefront(
     // todo write the edit cigar, use this to bound the alignment
 }
 
+void edlign_affine_wavefront(
+    const std::string& query_name,
+    const std::string& query,
+    const std::string& target_name,
+    const std::string& target,
+    const uint64_t& segment_length) {
+    // set up our implicit matrix
+    uint64_t steps_per_segment = 2;
+    uint64_t step_size = segment_length / steps_per_segment;
+
+    // Pattern & Text
+    const int pattern_length = query.size() / step_size - steps_per_segment;
+    const int text_length = target.size() / step_size - steps_per_segment;
+
+    // Allocate MM
+    wflambda::mm_allocator_t* const mm_allocator = wflambda::mm_allocator_new(BUFFER_SIZE_8M);
+    // Set penalties
+    wflambda::affine_penalties_t affine_penalties = {
+        .match = 0,
+        .mismatch = 4,
+        .gap_opening = 6,
+        .gap_extension = 2,
+    };
+    // Init Affine-WFA
+    wflambda::affine_wavefronts_t* affine_wavefronts = wflambda::affine_wavefronts_new_complete(
+        pattern_length,text_length,&affine_penalties,NULL,mm_allocator);
+
+    auto extend_match =
+        [&](const int& v,
+            const int& h) {
+            return do_alignment(
+                query_name,
+                query,
+                v * step_size,
+                target_name,
+                target,
+                h * step_size,
+                segment_length,
+                step_size,
+                std::cout);
+        };
+    // Align
+    wflambda::affine_wavefronts_align(
+        affine_wavefronts,
+        extend_match,
+        pattern_length,
+        text_length);
+    // Display alignment
+    const int score = wflambda::edit_cigar_score_gap_affine(
+        &affine_wavefronts->edit_cigar,&affine_penalties);
+    //fprintf(stderr,"  PATTERN  %s\n",pattern);
+    //fprintf(stderr,"  TEXT     %s\n",text);
+    //fprintf(stderr,"  SCORE COMPUTED %d\t",score);
+    /*
+    wflambda::edit_cigar_print_pretty(stderr,
+                            pattern,strlen(pattern),text,strlen(text),
+                            &affine_wavefronts->edit_cigar,mm_allocator);
+    */
+    // Free
+    wflambda::affine_wavefronts_delete(affine_wavefronts);
+    wflambda::mm_allocator_delete(mm_allocator);
+}
+
+void edlign_affine_wavefront_reduced(
+    const std::string& query_name,
+    const std::string& query,
+    const std::string& target_name,
+    const std::string& target,
+    const uint64_t& segment_length,
+    const int& min_wavefront_length,
+    const int& max_distance_threshold) {
+    // set up our implicit matrix
+    uint64_t steps_per_segment = 2;
+    uint64_t step_size = segment_length / steps_per_segment;
+    //const int min_wavefront_length = _min_wavefront_length / segment_length;
+
+    // Pattern & Text
+    const int pattern_length = query.size() / step_size - steps_per_segment;
+    const int text_length = target.size() / step_size - steps_per_segment;
+
+    // Allocate MM
+    wflambda::mm_allocator_t* const mm_allocator = wflambda::mm_allocator_new(BUFFER_SIZE_8M);
+    // Set penalties
+    wflambda::affine_penalties_t affine_penalties = {
+        .match = 0,
+        .mismatch = 4,
+        .gap_opening = 6,
+        .gap_extension = 2,
+    };
+    // Init Affine-WFA
+    wflambda::affine_wavefronts_t* affine_wavefronts = wflambda::affine_wavefronts_new_reduced(
+        pattern_length,text_length,&affine_penalties,
+        min_wavefront_length,max_distance_threshold,
+        NULL,mm_allocator);
+
+    auto extend_match =
+        [&](const int& v,
+            const int& h) {
+            return v >= 0 && h >= 0
+                && v < pattern_length
+                && h < text_length
+                && do_alignment(
+                    query_name,
+                    query,
+                    v * step_size,
+                    target_name,
+                    target,
+                    h * step_size,
+                    segment_length,
+                    step_size,
+                    std::cout);
+        };
+    // Align
+    wflambda::affine_wavefronts_align(
+        affine_wavefronts,
+        extend_match,
+        pattern_length,
+        text_length);
+    // Display alignment
+    const int score = wflambda::edit_cigar_score_gap_affine(
+        &affine_wavefronts->edit_cigar,&affine_penalties);
+    //fprintf(stderr,"  PATTERN  %s\n",pattern);
+    //fprintf(stderr,"  TEXT     %s\n",text);
+    //fprintf(stderr,"  SCORE COMPUTED %d\t",score);
+    /*
+    wflambda::edit_cigar_print_pretty(stderr,
+                            pattern,strlen(pattern),text,strlen(text),
+                            &affine_wavefronts->edit_cigar,mm_allocator);
+    */
+    // Free
+    wflambda::affine_wavefronts_delete(affine_wavefronts);
+    wflambda::mm_allocator_delete(mm_allocator);
+}
+
 bool do_alignment(
     const std::string& query_name,
     const std::string& query,

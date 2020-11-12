@@ -10,13 +10,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)  # Make sure no compiler-specific features are use
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory(deps/edlib EXCLUDE_FROM_ALL)
+add_subdirectory(deps/wflambda EXCLUDE_FROM_ALL)
 
 add_executable(edlign
   src/main.cpp
   src/edlign.cpp
-  src/wfa_edit_callback.cpp
-  )
+  src/wfa_edit_callback.cpp)
 
 target_link_libraries(edlign
   edlib
+  wflambda
   z)

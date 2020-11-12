@@ -5,6 +5,7 @@
 #include <algorithm>
 #include "edlib.h"
 #include "wfa_edit_callback.hpp"
+#include "gap_affine/affine_wavefront_align.hpp"
 
 namespace edlign {
 
@@ -21,6 +22,22 @@ void edlign_wavefront(
     const std::string& target_name,
     const std::string& target,
     const uint64_t& segment_length);
+
+void edlign_affine_wavefront(
+    const std::string& query_name,
+    const std::string& query,
+    const std::string& target_name,
+    const std::string& target,
+    const uint64_t& segment_length);
+
+void edlign_affine_wavefront_reduced(
+    const std::string& query_name,
+    const std::string& query,
+    const std::string& target_name,
+    const std::string& target,
+    const uint64_t& segment_length,
+    const int& min_wavefront_length,
+    const int& max_distance_threshold);
 
 bool do_alignment(
     const std::string& query_name,
