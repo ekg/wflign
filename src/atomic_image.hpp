@@ -11,7 +11,7 @@
 #include <memory>
 #include <iostream>
 
-namespace edlign {
+namespace wflign {
 
 namespace algorithms {
 

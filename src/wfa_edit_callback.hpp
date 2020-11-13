@@ -28,7 +28,7 @@
 #include <functional>
 #include <iostream>
 
-namespace edlign {
+namespace wflign {
 
 /*
  * Translate k and offset to coordinates h,v

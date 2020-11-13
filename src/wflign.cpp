@@ -1,8 +1,8 @@
-#include "edlign.hpp"
+#include "wflign.hpp"
 
-namespace edlign {
+namespace wflign {
 
-void edlign_full(
+void wflign_full(
         const std::string& query_name,
         const std::string& query,
         const std::string& target_name,
@@ -21,7 +21,7 @@ void edlign_full(
     do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step, std::cout);
 }
 
-void edlign_wavefront(
+void wflign_wavefront(
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
@@ -62,7 +62,7 @@ void edlign_wavefront(
     // todo write the edit cigar, use this to bound the alignment
 }
 
-void edlign_affine_wavefront(
+void wflign_affine_wavefront(
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
@@ -125,7 +125,7 @@ void edlign_affine_wavefront(
     wflambda::mm_allocator_delete(mm_allocator);
 }
 
-void edlign_affine_wavefront_reduced(
+void wflign_affine_wavefront_reduced(
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,

@@ -23,7 +23,7 @@
 
 #include "wfa_edit_callback.hpp"
 
-namespace edlign {
+namespace wflign {
 
 void edit_wavefronts_init(
     edit_wavefronts_t* const wavefronts,

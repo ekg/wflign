@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
-project(edlign VERSION 0.0.1)
+project(wflign VERSION 0.0.1)
 
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
@@ -15,12 +15,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -mcx16 -march=native -g")
 add_subdirectory(deps/edlib EXCLUDE_FROM_ALL)
 add_subdirectory(deps/wflambda EXCLUDE_FROM_ALL)
 
-add_executable(edlign
+add_executable(wflign
   src/main.cpp
-  src/edlign.cpp
+  src/wflign.cpp
   src/wfa_edit_callback.cpp)
 
-target_link_libraries(edlign
+target_link_libraries(wflign
   edlib
   wflambda
   z)

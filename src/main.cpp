@@ -1,11 +1,11 @@
 #include <iostream>
 #include "seqiter.hpp"
-#include "edlign.hpp"
+#include "wflign.hpp"
 
 int main(int argc, char** argv) {
     assert(argc == 6);
-    std::string queries(argv[1]);
-    std::string targets(argv[2]);
+    std::string targets(argv[1]);
+    std::string queries(argv[2]);
     uint64_t segment_length = std::stoi(argv[3]);
     uint64_t min_wavefront_length = std::stoi(argv[4]);
     uint64_t max_distance_threshold = std::stoi(argv[5]);
@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
                 targets,
                 [&](const std::string& tname,
                     const std::string& tseq) {
-                    edlign::edlign_affine_wavefront_reduced(
+                    wflign::wflign_affine_wavefront_reduced(
                         qname, qseq,
                         tname, tseq,
                         segment_length,

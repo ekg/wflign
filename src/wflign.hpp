@@ -7,30 +7,30 @@
 #include "wfa_edit_callback.hpp"
 #include "gap_affine/affine_wavefront_align.hpp"
 
-namespace edlign {
+namespace wflign {
 
-void edlign_full(
+void wflign_full(
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
     const std::string& target,
     const uint64_t& segment_length);
 
-void edlign_wavefront(
+void wflign_wavefront(
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
     const std::string& target,
     const uint64_t& segment_length);
 
-void edlign_affine_wavefront(
+void wflign_affine_wavefront(
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
     const std::string& target,
     const uint64_t& segment_length);
 
-void edlign_affine_wavefront_reduced(
+void wflign_affine_wavefront_reduced(
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
