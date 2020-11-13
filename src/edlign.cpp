@@ -8,8 +8,8 @@ void edlign_full(
         const std::string& target_name,
         const std::string& target,
         const uint64_t& segment_length) {
-    uint64_t target_step = segment_length / 20;
-    uint64_t query_step = segment_length / 20;
+    uint64_t target_step = segment_length / 2;
+    uint64_t query_step = segment_length / 2;
     for (uint64_t i = 0; i < target.size() - segment_length - 1; i += target_step) {
         for (uint64_t j = 0; j < query.size() - segment_length - 1; j += query_step) {
             do_alignment(query_name, query, j, target_name, target, i, segment_length, query_step, std::cout);
