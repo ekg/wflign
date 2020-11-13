@@ -44,3 +44,12 @@ It can then be run with `wflign`.
 
 `wflign` assumes that the sequences are of suitable identity and oriented in the same direction.
 The provided executable is intended for testing.
+
+## todo
+
+This is a work in progress.
+To complete:
+
+- Correctly compute traceback to bound PAF output (requires caching alignments).
+- Explore recursive evaluation to find SVs (direct repeats and inversions) in unaligned regions of the query and target.
+- Parallel wavefront expansion.
