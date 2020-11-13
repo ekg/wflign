@@ -24,7 +24,7 @@ It can be impractical to directly align very long sequences, and we often requir
 WFA suggests an efficient way to reduce the amount of computation required to obtain the optimal alignment between two sequences.
 It reduces the cost to be quadratic in the score (penalty) of the optimal alignment.
 Thus, it can be very cheap when sequences are highly similar and the optimal alignment score is low.
-However, regions of the alignment of low quality can increase the memory and runtimes costs of the algorithm.
+However, regions of the alignment of low quality can increase the memory and runtime costs of the algorithm.
 
 To avoid such limitations, _wflign_ applies WFA at a high level, using it to guide the alignment process, and keeping the largest alignment problem size small.
 Our implementation thus requires only the memory to align a single segment and 1/_s_ the memory of the full WFA.
