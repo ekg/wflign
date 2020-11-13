@@ -7,7 +7,7 @@ _the we-flyin WFA-guided ultralong sequence aligner_
 `wflign` derives a global alignment for pairs of long sequences using very little memory and time.
 
 Rather than directly aligning the sequences, `wflign` aligns them to each other in small pieces, typically _s_ = 1kbp.
-To do so, it applies a version of the affine-gapped reduced wavefront algorithm (WFA) with callback-defined match function (WFλ) over this reduced alignment matrix.
+To do so, it applies WFλ, a version of the affine-gapped reduced wavefront algorithm (WFA) with callback-defined match function λ over this reduced alignment matrix.
 
 Each cell in the matrix corresponds to the alignment of a specific fragment from the target and query.
 To determine if the cell is a match (and guide WFλ), we compute the alignment using a fast pairwise aligner, indicating a match when we find an alignment within the given edit distance threshold.
