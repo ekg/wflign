@@ -4,14 +4,16 @@
 #include <vector>
 #include <algorithm>
 #include "edlib.h"
+#include "patchmap.hpp"
 #include "wfa_edit_callback.hpp"
 #include "gap_affine/affine_wavefront_align.hpp"
+#include "gap_affine/affine_wavefront_backtrace.hpp"
 
 namespace wflign {
 
 struct alignment_t {
-    int v = 0;
-    int h = 0;
+    int j = 0;
+    int i = 0;
     double identity = 0;
     const std::string* query_name;
     uint64_t query_size;
@@ -22,6 +24,10 @@ struct alignment_t {
         edlibFreeAlignResult(result);
     }
 };
+
+inline uint64_t encode_pair(int v, int h) {
+    return ((uint64_t)v << 32) | (uint64_t)h;
+}
 
 void wflign_full(
     const std::string& query_name,

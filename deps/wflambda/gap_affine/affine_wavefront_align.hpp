@@ -43,7 +43,8 @@ namespace wflambda {
  */
 void affine_wavefronts_align(
     affine_wavefronts_t* const affine_wavefronts,
-    const std::function<bool(const int&, const int&)>& lambda,
+    const std::function<bool(const int&, const int&)>& match_lambda,
+    const std::function<bool(const int&, const int&)>& traceback_lambda,
     const int pattern_length,
     const int text_length);
 

@@ -340,7 +340,8 @@ void affine_wavefronts_compute_wavefront(
  */
 void affine_wavefronts_align(
     affine_wavefronts_t* const affine_wavefronts,
-    const std::function<bool(const int&, const int&)>& lambda,
+    const std::function<bool(const int&, const int&)>& match_lambda,
+    const std::function<bool(const int&, const int&)>& traceback_lambda,
     const int pattern_length,
     const int text_length) {
   // Initialize wavefront
@@ -351,7 +352,7 @@ void affine_wavefronts_align(
     // Exact extend s-wavefront
     affine_wavefronts_extend_wavefront(
         affine_wavefronts,
-        lambda,
+        match_lambda,
         pattern_length,
         text_length,score);
     // Exit condition
@@ -359,7 +360,7 @@ void affine_wavefronts_align(
       // Backtrace & check alignment reached
       affine_wavefronts_backtrace(
           affine_wavefronts,
-          lambda,
+          traceback_lambda,
           pattern_length,
           text_length,score);
       break;
@@ -367,7 +368,7 @@ void affine_wavefronts_align(
     // Update all wavefronts
     ++score; // Increase score
     affine_wavefronts_compute_wavefront(
-        affine_wavefronts,lambda,pattern_length,
+        affine_wavefronts,match_lambda,pattern_length,
         text_length,score);
     // DEBUG
     //affine_wavefronts_debug_step(affine_wavefronts,pattern,text,score);

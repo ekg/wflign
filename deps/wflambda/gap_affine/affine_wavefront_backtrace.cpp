@@ -238,8 +238,7 @@ void affine_wavefronts_backtrace_matches__check(
     edit_cigar_t* const edit_cigar) {
   int i;
   for (i=0;i<num_matches;++i) {
-    // DEBUG
-#ifdef AFFINE_LAMBDA_WAVEFRONT_DEBUG
+    // run our traceback function on the alignments
     const int v = AFFINE_LAMBDA_WAVEFRONT_V(k,offset);
     const int h = AFFINE_LAMBDA_WAVEFRONT_H(k,offset);
     if (!valid_location) { // Check inside table
@@ -249,7 +248,6 @@ void affine_wavefronts_backtrace_matches__check(
       fprintf(stderr,"Backtrace error: Not a match traceback\n");
       exit(1);
     }
-#endif
     // Set Match
     edit_cigar->operations[(edit_cigar->begin_offset)--] = 'M';
     // Update state
