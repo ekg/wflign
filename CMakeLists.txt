@@ -20,6 +20,9 @@ add_executable(wflign
   src/wflign.cpp
   src/wfa_edit_callback.cpp)
 
+target_include_directories(wflign PRIVATE
+  deps/)
+
 target_link_libraries(wflign
   edlib
   wflambda

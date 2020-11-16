@@ -12,13 +12,19 @@ void wflign_full(
     uint64_t query_step = segment_length / 2;
     for (uint64_t i = 0; i < target.size() - segment_length - 1; i += target_step) {
         for (uint64_t j = 0; j < query.size() - segment_length - 1; j += query_step) {
-            do_alignment(query_name, query, j, target_name, target, i, segment_length, query_step, std::cout);
+            alignment_t aln;
+            do_alignment(query_name, query, j, target_name, target, i, segment_length, query_step, aln);
+            std::cout << aln << std::endl;
         }
         // do the last alignment in the row
-        do_alignment(query_name, query, query.size()-segment_length, target_name, target, i, segment_length, query_step, std::cout);
+        alignment_t aln;
+        do_alignment(query_name, query, query.size()-segment_length, target_name, target, i, segment_length, query_step, aln);
+        std::cout << aln << std::endl;
     }
     // do the last alignment in the final column
-    do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step, std::cout);
+    alignment_t aln;
+    do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step, aln);
+    std::cout << aln << std::endl;
 }
 
 void wflign_wavefront(
@@ -41,20 +47,37 @@ void wflign_wavefront(
     edit_wavefronts_t wavefronts;
     edit_wavefronts_init(&wavefronts, pattern_length, text_length);
     edit_wavefronts_clean(&wavefronts);
+
+    std::vector<alignment_t*> alignments;
     auto extend_match =
         [&](const int& v,
             const int& h) {
-            return do_alignment(
-                query_name,
-                query,
-                v * step_size,
-                target_name,
-                target,
-                h * step_size,
-                segment_length,
-                step_size,
-                std::cout);
+            bool aligned = false;
+            if (v >= 0 && h >= 0
+                && v < pattern_length
+                && h < text_length) {
+                alignment_t* aln = new alignment_t();
+                aligned =
+                    do_alignment(
+                        query_name,
+                        query,
+                        v * step_size,
+                        target_name,
+                        target,
+                        h * step_size,
+                        segment_length,
+                        step_size,
+                        *aln);
+                if (aligned) {
+                    // save the alignment for traceback
+                    alignments.push_back(aln);
+                } else {
+                    delete aln;
+                }
+            }
+            return aligned;
         };
+
     edit_wavefronts_align(&wavefronts,
                           extend_match,
                           pattern_length,
@@ -89,20 +112,36 @@ void wflign_affine_wavefront(
     wflambda::affine_wavefronts_t* affine_wavefronts = wflambda::affine_wavefronts_new_complete(
         pattern_length,text_length,&affine_penalties,NULL,mm_allocator);
 
+    std::vector<alignment_t*> alignments;
     auto extend_match =
         [&](const int& v,
             const int& h) {
-            return do_alignment(
-                query_name,
-                query,
-                v * step_size,
-                target_name,
-                target,
-                h * step_size,
-                segment_length,
-                step_size,
-                std::cout);
+            bool aligned = false;
+            if (v >= 0 && h >= 0
+                && v < pattern_length
+                && h < text_length) {
+                alignment_t* aln = new alignment_t();
+                aligned =
+                    do_alignment(
+                        query_name,
+                        query,
+                        v * step_size,
+                        target_name,
+                        target,
+                        h * step_size,
+                        segment_length,
+                        step_size,
+                        *aln);
+                if (aligned) {
+                    // save the alignment for traceback
+                    alignments.push_back(aln);
+                } else {
+                    delete aln;
+                }
+            }
+            return aligned;
         };
+
     // Align
     wflambda::affine_wavefronts_align(
         affine_wavefronts,
@@ -157,22 +196,37 @@ void wflign_affine_wavefront_reduced(
         min_wavefront_length,max_distance_threshold,
         NULL,mm_allocator);
 
+    std::vector<alignment_t*> alignments;
+    // save this in a pair-indexed patchmap
+
     auto extend_match =
         [&](const int& v,
             const int& h) {
-            return v >= 0 && h >= 0
+            bool aligned = false;
+            if (v >= 0 && h >= 0
                 && v < pattern_length
-                && h < text_length
-                && do_alignment(
-                    query_name,
-                    query,
-                    v * step_size,
-                    target_name,
-                    target,
-                    h * step_size,
-                    segment_length,
-                    step_size,
-                    std::cout);
+                && h < text_length) {
+                alignment_t* aln = new alignment_t();
+                aligned =
+                    do_alignment(
+                        query_name,
+                        query,
+                        v * step_size,
+                        target_name,
+                        target,
+                        h * step_size,
+                        segment_length,
+                        step_size,
+                        *aln);
+                if (aligned) {
+                    // save the alignment for traceback
+                    std::cout << *aln << std::endl;
+                    alignments.push_back(aln);
+                } else {
+                    delete aln;
+                }
+            }
+            return aligned;
         };
     // Align
     wflambda::affine_wavefronts_align(
@@ -194,7 +248,17 @@ void wflign_affine_wavefront_reduced(
     // Free
     wflambda::affine_wavefronts_delete(affine_wavefronts);
     wflambda::mm_allocator_delete(mm_allocator);
+    for (auto& aln : alignments) {
+        delete aln;
+    }
 }
+
+// todo...
+// accumulate alignment objects
+// run the traceback determine which are part of the main chain
+// order them and write them out
+// needed--- 0-cost deduplication of alignment regions (how????)
+//     --- trim the alignment back to the first 1/2 of the query
 
 bool do_alignment(
     const std::string& query_name,
@@ -205,19 +269,34 @@ bool do_alignment(
     const uint64_t& i,
     const uint64_t& segment_length,
     const uint64_t& step_size,
-    std::ostream& output) {
+    alignment_t& aln) {
 
     auto edlib_config = edlibNewAlignConfig(step_size,
                                             EDLIB_MODE_NW,
                                             EDLIB_TASK_PATH,
                                             NULL, 0);
 
-    EdlibAlignResult result = edlibAlign(query.c_str()+j, segment_length,
-                                         target.c_str()+i, segment_length,
-                                         edlib_config);
+    aln.result = edlibAlign(query.c_str()+j, segment_length,
+                        target.c_str()+i, segment_length,
+                        edlib_config);
 
-    bool aligned = false;
+    aln.query_name = &query_name;
+    aln.query_size = query.size();
+    aln.target_name = &target_name;
+    aln.target_size = target.size();
+
+    return aln.result.status == EDLIB_STATUS_OK
+        && aln.result.alignmentLength != 0
+        && aln.result.editDistance >= 0;
+}
+
+
+std::ostream& operator<<(
+    std::ostream& out,
+    const alignment_t& aln) {
+//    bool aligned = false;
     //Output to file
+    auto& result = aln.result;
     if (result.status == EDLIB_STATUS_OK
         && result.alignmentLength != 0
         && result.editDistance >= 0) {
@@ -240,41 +319,37 @@ bool do_alignment(
                                        deletions,
                                        softclips);
 
-        size_t alignmentRefPos = i + result.startLocations[0];
+        size_t alignmentRefPos = aln.h + result.startLocations[0];
         double total = refAlignedLength + (qAlignedLength - softclips);
         double identity = (double)(total - mismatches * 2 - insertions - deletions) / total;
 
-        output << query_name
-               << "\t" << query.size()
-               << "\t" << j
-               << "\t" << j + qAlignedLength
-               << "\t" << "+" // todo (currentRecord.strand == skch::strnd::FWD ? "+" : "-")
-               << "\t" << target_name
-               << "\t" << target.size()
-               << "\t" << alignmentRefPos
-               << "\t" << alignmentRefPos + refAlignedLength
-               << "\t" << matches
-               << "\t" << std::max(refAlignedLength, qAlignedLength)
-               << "\t" << std::round(float2phred(1.0-identity))
-               << "\t" << "id:f:" << identity
-               << "\t" << "ma:i:" << matches
-               << "\t" << "mm:i:" << mismatches
-               << "\t" << "ni:i:" << insertions
-               << "\t" << "nd:i:" << deletions
-               << "\t" << "ns:i:" << softclips
-               << "\t" << "ed:i:" << result.editDistance
-               << "\t" << "al:i:" << result.alignmentLength
-               << "\t" << "se:f:" << result.editDistance / (double)result.alignmentLength
-               << "\t" << "cg:Z:" << cigar
-               << "\n";
+        out << *aln.query_name
+            << "\t" << aln.query_size
+            << "\t" << aln.v
+            << "\t" << aln.v + qAlignedLength
+            << "\t" << "+" // todo (currentRecord.strand == skch::strnd::FWD ? "+" : "-")
+            << "\t" << *aln.target_name
+            << "\t" << aln.target_size
+            << "\t" << alignmentRefPos
+            << "\t" << alignmentRefPos + refAlignedLength
+            << "\t" << matches
+            << "\t" << std::max(refAlignedLength, qAlignedLength)
+            << "\t" << std::round(float2phred(1.0-identity))
+            << "\t" << "id:f:" << identity
+            << "\t" << "ma:i:" << matches
+            << "\t" << "mm:i:" << mismatches
+            << "\t" << "ni:i:" << insertions
+            << "\t" << "nd:i:" << deletions
+            << "\t" << "ns:i:" << softclips
+            << "\t" << "ed:i:" << result.editDistance
+            << "\t" << "al:i:" << result.alignmentLength
+            << "\t" << "se:f:" << result.editDistance / (double)result.alignmentLength
+            << "\t" << "cg:Z:" << cigar;
 
         free(cigar);
-        aligned = true;
     }
 
-    edlibFreeAlignResult(result);
-
-    return aligned;
+    return out;
 }
 
 char* alignmentToCigar(

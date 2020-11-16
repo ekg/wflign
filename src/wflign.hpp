@@ -9,6 +9,20 @@
 
 namespace wflign {
 
+struct alignment_t {
+    int v = 0;
+    int h = 0;
+    double identity = 0;
+    const std::string* query_name;
+    uint64_t query_size;
+    const std::string* target_name;
+    uint64_t target_size;
+    EdlibAlignResult result;
+    ~alignment_t(void) {
+        edlibFreeAlignResult(result);
+    }
+};
+
 void wflign_full(
     const std::string& query_name,
     const std::string& query,
@@ -48,7 +62,11 @@ bool do_alignment(
     const uint64_t& i,
     const uint64_t& segment_length,
     const uint64_t& step_size,
-    std::ostream& output);
+    alignment_t& alignment);
+
+std::ostream& operator<<(
+    std::ostream& out,
+    const alignment_t& aln);
 
 char* alignmentToCigar(
     const unsigned char* const alignment,
