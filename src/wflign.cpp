@@ -254,11 +254,18 @@ void wflign_affine_wavefront_reduced(
             return aligned;
         };
 
+    // accumulate runs of matches in reverse order
+    // then trim the cigars of successive mappings
+    //
+    std::vector<alignment_t*> trace;
+    
     auto trace_match =
         [&](const int& v, const int& h) {
             uint64_t k = encode_pair(v, h);
-            if (alignments.find(k) != alignments.end()) {
-                std::cout << *alignments[k] << std::endl;
+            auto f = alignments.find(k);
+            if (f != alignments.end()) {
+                //std::cout << *f->second << std::endl;
+                trace.push_back(f->second);
                 return true;
             } else {
                 return false;
@@ -272,6 +279,40 @@ void wflign_affine_wavefront_reduced(
         trace_match,
         pattern_length,
         text_length);
+
+    auto x = trace.rbegin();
+
+    while (x != trace.rend()) {
+        // merge runs of alignments here
+        int last_i = (*x)->i;
+        int last_j = (*x)->j;
+        auto b = x;
+        auto e = x;
+        while (++e != trace.rend()) {
+            if ((*e)->i == last_i + step_size
+                && (*e)->j == last_j + step_size) {
+                // match state
+                last_i = (*e)->i;
+                last_j = (*e)->j;
+            } else {
+                break;
+            }
+        }
+        // accumulate and emit
+        // TODO
+        // add a field to the alignment object that sets its offset from the beginning
+        // and then run the alignment forward until it consumes this much query when writing
+        // this will let us emit non-overlapping alignments, which is simpler and easier
+        // but it may make sense to not combine them, which will allow for partial filtering
+        // but... combining them has its advantages
+        // can we do it?
+        for (auto a = b; a != e; ++a) {
+            std::cout << **a << std::endl;
+        }
+        //std::cout << "l8r ======================" << std::endl;
+        x = e; // increment outer iterator
+    }
+    
     // Display alignment
     const int score = wflambda::edit_cigar_score_gap_affine(
         &affine_wavefronts->edit_cigar,&affine_penalties);
