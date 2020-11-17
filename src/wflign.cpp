@@ -82,7 +82,7 @@ void wflign_wavefront(
                           extend_match,
                           pattern_length,
                           text_length);
-    // todo write the edit cigar, use this to bound the alignment
+    // todo write the wflign edit cigar
 }
 
 void wflign_affine_wavefront(
@@ -299,14 +299,23 @@ void wflign_affine_wavefront_reduced(
             }
         }
         // accumulate and emit
-        // TODO
-        // add a field to the alignment object that sets its offset from the beginning
-        // and then run the alignment forward until it consumes this much query when writing
-        // this will let us emit non-overlapping alignments, which is simpler and easier
-        // but it may make sense to not combine them, which will allow for partial filtering
-        // but... combining them has its advantages
-        // can we do it?
+        // remove overlapping regions of alignments by trimming them
+        // scheme: split the difference between alignments in a chain
+        auto trim = step_size / 2;
         for (auto a = b; a != e; ++a) {
+            (*a)->keep_query_length = step_size;
+            if (a != b) {
+                (*a)->skip_query_start = trim;
+            } else {
+                (*a)->keep_query_length += trim;
+            }
+            if ((a+1) == e) {
+                (*a)->keep_query_length += trim;
+            }
+            // todo... compute the traceback outside of this output function,
+            // so we can get account of the length of things that are mapped
+            // we'll use that later to recurse into the unaligned bits and allow inversions
+            // and other funny things
             std::cout << **a << std::endl;
         }
         //std::cout << "l8r ======================" << std::endl;
@@ -380,9 +389,15 @@ std::ostream& operator<<(
         uint64_t softclips = 0;
         uint64_t refAlignedLength = 0;
         uint64_t qAlignedLength = 0;
+        int skipped_target_start = 0;
+        int kept_target_length = 0;
 
         char* cigar = alignmentToCigar(result.alignment,
                                        result.alignmentLength,
+                                       aln.skip_query_start,
+                                       aln.keep_query_length,
+                                       skipped_target_start,
+                                       kept_target_length,
                                        refAlignedLength,
                                        qAlignedLength,
                                        matches,
@@ -397,13 +412,13 @@ std::ostream& operator<<(
 
         out << *aln.query_name
             << "\t" << aln.query_size
-            << "\t" << aln.j
-            << "\t" << aln.j + qAlignedLength
+            << "\t" << aln.j + aln.skip_query_start
+            << "\t" << aln.j + aln.skip_query_start + qAlignedLength
             << "\t" << "+" // todo (currentRecord.strand == skch::strnd::FWD ? "+" : "-")
             << "\t" << *aln.target_name
             << "\t" << aln.target_size
-            << "\t" << alignmentRefPos
-            << "\t" << alignmentRefPos + refAlignedLength
+            << "\t" << alignmentRefPos + skipped_target_start
+            << "\t" << alignmentRefPos + skipped_target_start + refAlignedLength
             << "\t" << matches
             << "\t" << std::max(refAlignedLength, qAlignedLength)
             << "\t" << std::round(float2phred(1.0-identity))
@@ -427,6 +442,10 @@ std::ostream& operator<<(
 char* alignmentToCigar(
     const unsigned char* const alignment,
     const int alignmentLength,
+    const int skip_query_start,
+    const int keep_query_length,
+    int& skipped_target_start,
+    int& kept_target_length,
     uint64_t& refAlignedLength,
     uint64_t& qAlignedLength,
     uint64_t& matches,
@@ -442,14 +461,58 @@ char* alignmentToCigar(
     std::vector<char>* cigar = new std::vector<char>();
     char lastMove = 0;  // Char of last move. 0 if there was no previous move.
     int numOfSameMoves = 0;
-    for (int i = 0; i <= alignmentLength; i++) {
+    //bool in_keep = false;
+    int seen_query = 0;
+    int start_idx = 0;
+    while (start_idx < alignmentLength
+           && seen_query < skip_query_start) {
+        switch (moveCodeToChar[alignment[start_idx++]]) {
+        case 'X':
+        case '=':
+            ++skipped_target_start;
+            ++seen_query;
+            break;
+        case 'I':
+            ++seen_query;
+            break;
+        case 'D':
+            ++skipped_target_start;
+            break;
+        default:
+            break;
+        }
+    }
+    int end_idx = start_idx;
+    seen_query = 0;
+    while (end_idx < alignmentLength
+        && seen_query < keep_query_length) {
+        switch (moveCodeToChar[alignment[end_idx++]]) {
+        case 'X':
+        case '=':
+            ++kept_target_length;
+            ++seen_query;
+            break;
+        case 'I':
+            ++seen_query;
+            break;
+        case 'D':
+            ++kept_target_length;
+            break;
+        default:
+            break;
+        }
+    }
+    if (end_idx == start_idx) {
+        end_idx = alignmentLength;
+    }
+    for (int i = start_idx; i <= end_idx; i++) {
         // if new sequence of same moves started
-        if (i == alignmentLength || (moveCodeToChar[alignment[i]] != lastMove && lastMove != 0)) {
+        if (i == end_idx || (moveCodeToChar[alignment[i]] != lastMove && lastMove != 0)) {
             // calculate matches, mismatches, insertions, deletions
             switch (lastMove) {
             case 'I':
                 // assume that starting and ending insertions are softclips
-                if (i == alignmentLength || cigar->empty()) {
+                if (i == end_idx || cigar->empty()) {
                     softclips += numOfSameMoves;
                 } else {
                     insertions += numOfSameMoves;
@@ -484,7 +547,7 @@ char* alignmentToCigar(
             // Write code of move to cigar string.
             cigar->push_back(lastMove);
             // If not at the end, start new sequence of moves.
-            if (i < alignmentLength) {
+            if (i < end_idx) {
                 // Check if alignment has valid values.
                 if (alignment[i] > 3) {
                     delete cigar;
@@ -493,7 +556,7 @@ char* alignmentToCigar(
                 numOfSameMoves = 0;
             }
         }
-        if (i < alignmentLength) {
+        if (i < end_idx) {
             lastMove = moveCodeToChar[alignment[i]];
             numOfSameMoves++;
         }

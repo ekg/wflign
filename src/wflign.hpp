@@ -15,6 +15,10 @@ struct alignment_t {
     int j = 0;
     int i = 0;
     double identity = 0;
+    int skip_query_start = 0;
+    int keep_query_length = 0;
+    int skip_target_start = 0;
+    int keep_target_length = 0;
     const std::string* query_name;
     uint64_t query_size;
     const std::string* target_name;
@@ -77,6 +81,10 @@ std::ostream& operator<<(
 char* alignmentToCigar(
     const unsigned char* const alignment,
     const int alignmentLength,
+    const int skip_query_start,
+    const int keep_query_length,
+    int& skipped_target_start,
+    int& kept_target_length,
     uint64_t& refAlignedLength,
     uint64_t& qAlignedLength,
     uint64_t& matches,
