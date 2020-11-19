@@ -6,8 +6,8 @@
 #include "edlib.h"
 #include "patchmap.hpp"
 #include "wfa_edit_callback.hpp"
-#include "gap_affine/affine_wavefront_align.hpp"
-#include "gap_affine/affine_wavefront_backtrace.hpp"
+#include "wflambda/gap_affine/affine_wavefront_align.hpp"
+#include "wflambda/gap_affine/affine_wavefront_backtrace.hpp"
 
 namespace wflign {
 

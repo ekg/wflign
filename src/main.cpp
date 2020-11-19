@@ -70,7 +70,6 @@ int main(int argc, char** argv) {
         parse_file_list(args::get(query_sequence_file_list), queries);
     }
 
-
     uint64_t segment_length = p_segment_length ? args::get(p_segment_length) : 1000;
     uint64_t min_wavefront_length = wf_min ? args::get(wf_min) : 100;
     uint64_t max_distance_threshold = wf_diff ? args::get(wf_diff) : 200;

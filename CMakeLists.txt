@@ -21,6 +21,7 @@ add_executable(wflign
   src/wfa_edit_callback.cpp)
 
 target_include_directories(wflign PRIVATE
+  deps/
   deps/patchmap)
 
 target_link_libraries(wflign
