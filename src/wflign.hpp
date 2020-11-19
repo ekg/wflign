@@ -52,16 +52,9 @@ void wflign_affine_wavefront(
     const std::string& query,
     const std::string& target_name,
     const std::string& target,
-    const uint64_t& segment_length);
-
-void wflign_affine_wavefront_reduced(
-    const std::string& query_name,
-    const std::string& query,
-    const std::string& target_name,
-    const std::string& target,
     const uint64_t& segment_length,
-    const int& min_wavefront_length,
-    const int& max_distance_threshold);
+    const int& min_wavefront_length = 0,
+    const int& max_distance_threshold = 0);
 
 bool do_alignment(
     const std::string& query_name,
