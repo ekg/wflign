@@ -94,8 +94,8 @@ int main(int argc, char** argv) {
                             const std::string& tseq) {
                             wflign::wflign_affine_wavefront(
                                 std::cout,
-                                qname, qseq,
-                                tname, tseq,
+                                qname, qseq.c_str(), qseq.size(),
+                                tname, tseq.c_str(), qseq.size(),
                                 segment_length,
                                 min_identity,
                                 min_wavefront_length,

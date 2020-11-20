@@ -38,25 +38,33 @@ inline uint64_t encode_pair(int v, int h) {
 void wflign_full(
     std::ostream& out,
     const std::string& query_name,
-    const std::string& query,
+    const char* query,
+    const uint64_t& query_length,
     const std::string& target_name,
-    const std::string& target,
-    const uint64_t& segment_length);
+    const char* target,
+    const uint64_t& target_length,
+    const uint64_t& segment_length,
+    const float& min_identity);
 
 void wflign_wavefront(
     std::ostream& out,
     const std::string& query_name,
-    const std::string& query,
+    const char* query,
+    const uint64_t& query_length,
     const std::string& target_name,
-    const std::string& target,
-    const uint64_t& segment_length);
+    const char* target,
+    const uint64_t& target_length,
+    const uint64_t& segment_length,
+    const float& min_identity);
 
 void wflign_affine_wavefront(
     std::ostream& out,
     const std::string& query_name,
-    const std::string& query,
+    const char* query,
+    const uint64_t& query_length,
     const std::string& target_name,
-    const std::string& target,
+    const char* target,
+    const uint64_t& target_length,
     const uint64_t& segment_length,
     const float& min_identity,
     const int& min_wavefront_length = 0, // with these set at 0 we do exact WFA
@@ -64,14 +72,16 @@ void wflign_affine_wavefront(
 
 bool do_alignment(
     const std::string& query_name,
-    const std::string& query,
+    const char* query,
+    const uint64_t& query_length,
     const uint64_t& j,
     const std::string& target_name,
-    const std::string& target,
+    const char* target,
+    const uint64_t& target_length,
     const uint64_t& i,
     const uint64_t& segment_length,
     const uint64_t& step_size,
-    alignment_t& alignment);
+    alignment_t& aln);
 
 std::ostream& operator<<(
     std::ostream& out,
