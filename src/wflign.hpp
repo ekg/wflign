@@ -21,10 +21,6 @@ struct alignment_t {
     int keep_query_length = 0;
     int skip_target_start = 0;
     int keep_target_length = 0;
-    const std::string* query_name;
-    uint64_t query_size;
-    const std::string* target_name;
-    uint64_t target_size;
     EdlibAlignResult result;
     ~alignment_t(void) {
         edlibFreeAlignResult(result);
@@ -39,9 +35,13 @@ void wflign_full(
     std::ostream& out,
     const std::string& query_name,
     const char* query,
+    const uint64_t& query_total_length,
+    const uint64_t& query_offset,
     const uint64_t& query_length,
     const std::string& target_name,
     const char* target,
+    const uint64_t& target_total_length,
+    const uint64_t& target_offset,
     const uint64_t& target_length,
     const uint64_t& segment_length,
     const float& min_identity);
@@ -50,9 +50,13 @@ void wflign_wavefront(
     std::ostream& out,
     const std::string& query_name,
     const char* query,
+    const uint64_t& query_total_length,
+    const uint64_t& query_offset,
     const uint64_t& query_length,
     const std::string& target_name,
     const char* target,
+    const uint64_t& target_total_length,
+    const uint64_t& target_offset,
     const uint64_t& target_length,
     const uint64_t& segment_length,
     const float& min_identity);
@@ -61,9 +65,13 @@ void wflign_affine_wavefront(
     std::ostream& out,
     const std::string& query_name,
     const char* query,
+    const uint64_t& query_total_length,
+    const uint64_t& query_offset,
     const uint64_t& query_length,
     const std::string& target_name,
     const char* target,
+    const uint64_t& target_total_length,
+    const uint64_t& target_offset,
     const uint64_t& target_length,
     const uint64_t& segment_length,
     const float& min_identity,
@@ -83,13 +91,15 @@ bool do_alignment(
     const uint64_t& step_size,
     alignment_t& aln);
 
-std::ostream& operator<<(
-    std::ostream& out,
-    const alignment_t& aln);
-
 void write_alignment(
     std::ostream& out,
     const alignment_t& aln,
+    const std::string& query_name,
+    const uint64_t& query_total_length,
+    const uint64_t& query_offset,
+    const std::string& target_name,
+    const uint64_t& target_total_length,
+    const uint64_t& target_offset,
     const float& min_identity,
     const bool& with_endline = true);
 

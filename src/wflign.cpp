@@ -6,9 +6,13 @@ void wflign_full(
     std::ostream& out,
     const std::string& query_name,
     const char* query,
+    const uint64_t& query_total_length,
+    const uint64_t& query_offset,
     const uint64_t& query_length,
     const std::string& target_name,
     const char* target,
+    const uint64_t& target_total_length,
+    const uint64_t& target_offset,
     const uint64_t& target_length,
     const uint64_t& segment_length,
     const float& min_identity) {
@@ -18,26 +22,30 @@ void wflign_full(
         for (uint64_t j = 0; j < query_length - segment_length - 1; j += query_step) {
             alignment_t aln;
             do_alignment(query_name, query, query_length, j, target_name, target, target_length, i, segment_length, query_step, aln);
-            write_alignment(std::cout, aln, min_identity);
+            write_alignment(out, aln, query_name, query_total_length, query_offset, target_name, target_total_length, target_offset, min_identity);
         }
         // do the last alignment in the row
         alignment_t aln;
         do_alignment(query_name, query, query_length, query_length-segment_length, target_name, target, target_length, i, segment_length, query_step, aln);
-        write_alignment(std::cout, aln, min_identity);
+        write_alignment(out, aln, query_name, query_total_length, query_offset, target_name, target_total_length, target_offset, min_identity);
     }
     // do the last alignment in the final column
     alignment_t aln;
     do_alignment(query_name, query, query_length, query_length-segment_length, target_name, target, target_length, target_length-segment_length, segment_length, query_step, aln);
-    write_alignment(std::cout, aln, min_identity);
+    write_alignment(out, aln, query_name, query_total_length, query_offset, target_name, target_total_length, target_offset, min_identity);
 }
 
 void wflign_wavefront(
     std::ostream& out,
     const std::string& query_name,
     const char* query,
+    const uint64_t& query_total_length,
+    const uint64_t& query_offset,
     const uint64_t& query_length,
     const std::string& target_name,
     const char* target,
+    const uint64_t& target_total_length,
+    const uint64_t& target_offset,
     const uint64_t& target_length,
     const uint64_t& segment_length,
     const float& min_identity) {
@@ -99,9 +107,13 @@ void wflign_affine_wavefront(
     std::ostream& out,
     const std::string& query_name,
     const char* query,
+    const uint64_t& query_total_length,
+    const uint64_t& query_offset,
     const uint64_t& query_length,
     const std::string& target_name,
     const char* target,
+    const uint64_t& target_total_length,
+    const uint64_t& target_offset,
     const uint64_t& target_length,
     const uint64_t& segment_length,
     const float& min_identity,
@@ -247,7 +259,7 @@ void wflign_affine_wavefront(
             // so we can get account of the length of things that are mapped
             // we'll use that later to recurse into the unaligned bits and allow inversions
             // and other funny things
-            write_alignment(std::cout, **a, min_identity);
+            write_alignment(out, **a, query_name, query_total_length, query_offset, target_name, target_total_length, target_offset, min_identity);
         }
         x = e;
     }
@@ -290,10 +302,6 @@ bool do_alignment(
 
     aln.j = j;
     aln.i = i;
-    aln.query_name = &query_name;
-    aln.query_size = query_length;
-    aln.target_name = &target_name;
-    aln.target_size = target_length;
 
     return aln.result.status == EDLIB_STATUS_OK
         && aln.result.alignmentLength != 0
@@ -304,6 +312,12 @@ bool do_alignment(
 void write_alignment(
     std::ostream& out,
     const alignment_t& aln,
+    const std::string& query_name,
+    const uint64_t& query_total_length,
+    const uint64_t& query_offset,
+    const std::string& target_name,
+    const uint64_t& target_total_length,
+    const uint64_t& target_offset,
     const float& min_identity,
     const bool& with_endline) {
 //    bool aligned = false;
@@ -342,15 +356,15 @@ void write_alignment(
         double identity = (double)(total - mismatches * 2 - insertions - deletions) / total;
 
         if (identity >= min_identity) {
-            out << *aln.query_name
-                << "\t" << aln.query_size
-                << "\t" << aln.j + aln.skip_query_start
-                << "\t" << aln.j + aln.skip_query_start + qAlignedLength
+            out << query_name
+                << "\t" << query_total_length
+                << "\t" << query_offset + aln.j + aln.skip_query_start
+                << "\t" << query_offset + aln.j + aln.skip_query_start + qAlignedLength
                 << "\t" << "+" // todo (currentRecord.strand == skch::strnd::FWD ? "+" : "-")
-                << "\t" << *aln.target_name
-                << "\t" << aln.target_size
-                << "\t" << alignmentRefPos + skipped_target_start
-                << "\t" << alignmentRefPos + skipped_target_start + refAlignedLength
+                << "\t" << target_name
+                << "\t" << target_total_length
+                << "\t" << target_offset + alignmentRefPos + skipped_target_start
+                << "\t" << target_offset + alignmentRefPos + skipped_target_start + refAlignedLength
                 << "\t" << matches
                 << "\t" << std::max(refAlignedLength, qAlignedLength)
                 << "\t" << std::round(float2phred(1.0-identity))
@@ -370,13 +384,6 @@ void write_alignment(
         }
         free(cigar);
     }
-}
-
-std::ostream& operator<<(
-    std::ostream& out,
-    const alignment_t& aln) {
-    write_alignment(out, aln, 0, false);
-    return out;
 }
 
 char* alignmentToCigar(
