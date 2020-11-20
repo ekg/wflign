@@ -36,6 +36,7 @@ inline uint64_t encode_pair(int v, int h) {
 }
 
 void wflign_full(
+    std::ostream& out,
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
@@ -43,6 +44,7 @@ void wflign_full(
     const uint64_t& segment_length);
 
 void wflign_wavefront(
+    std::ostream& out,
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
@@ -50,6 +52,7 @@ void wflign_wavefront(
     const uint64_t& segment_length);
 
 void wflign_affine_wavefront(
+    std::ostream& out,
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,

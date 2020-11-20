@@ -3,12 +3,13 @@
 namespace wflign {
 
 void wflign_full(
-        const std::string& query_name,
-        const std::string& query,
-        const std::string& target_name,
-        const std::string& target,
-        const uint64_t& segment_length,
-        const float& min_identity) {
+    std::ostream& out,
+    const std::string& query_name,
+    const std::string& query,
+    const std::string& target_name,
+    const std::string& target,
+    const uint64_t& segment_length,
+    const float& min_identity) {
     uint64_t target_step = segment_length / 2;
     uint64_t query_step = segment_length / 2;
     for (uint64_t i = 0; i < target.size() - segment_length - 1; i += target_step) {
@@ -29,6 +30,7 @@ void wflign_full(
 }
 
 void wflign_wavefront(
+    std::ostream& out,
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
@@ -88,6 +90,7 @@ void wflign_wavefront(
 }
 
 void wflign_affine_wavefront(
+    std::ostream& out,
     const std::string& query_name,
     const std::string& query,
     const std::string& target_name,
@@ -173,7 +176,6 @@ void wflign_affine_wavefront(
             uint64_t k = encode_pair(v, h);
             auto f = alignments.find(k);
             if (f != alignments.end()) {
-                //std::cout << *f->second << std::endl;
                 trace.push_back(f->second);
                 return true;
             } else {

@@ -93,6 +93,7 @@ int main(int argc, char** argv) {
                         [&](const std::string& tname,
                             const std::string& tseq) {
                             wflign::wflign_affine_wavefront(
+                                std::cout,
                                 qname, qseq,
                                 tname, tseq,
                                 segment_length,
