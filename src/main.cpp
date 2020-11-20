@@ -95,6 +95,7 @@ int main(int argc, char** argv) {
                             wflign::wflign_affine_wavefront(
                                 std::cout,
                                 qname, qseq.c_str(), qseq.size(), 0, qseq.size(),
+                                false, // query is rev
                                 tname, tseq.c_str(), tseq.size(), 0, tseq.size(),
                                 segment_length,
                                 min_identity,

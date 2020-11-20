@@ -38,6 +38,7 @@ void wflign_full(
     const uint64_t& query_total_length,
     const uint64_t& query_offset,
     const uint64_t& query_length,
+    const bool& query_is_rev,
     const std::string& target_name,
     const char* target,
     const uint64_t& target_total_length,
@@ -53,6 +54,7 @@ void wflign_wavefront(
     const uint64_t& query_total_length,
     const uint64_t& query_offset,
     const uint64_t& query_length,
+    const bool& query_is_rev,
     const std::string& target_name,
     const char* target,
     const uint64_t& target_total_length,
@@ -68,6 +70,7 @@ void wflign_affine_wavefront(
     const uint64_t& query_total_length,
     const uint64_t& query_offset,
     const uint64_t& query_length,
+    const bool& query_is_rev,
     const std::string& target_name,
     const char* target,
     const uint64_t& target_total_length,
@@ -75,8 +78,8 @@ void wflign_affine_wavefront(
     const uint64_t& target_length,
     const uint64_t& segment_length,
     const float& min_identity,
-    const int& min_wavefront_length = 0, // with these set at 0 we do exact WFA
-    const int& max_distance_threshold = 0);
+    const int& min_wavefront_length, // with these set at 0 we do exact WFA
+    const int& max_distance_threshold);
 
 bool do_alignment(
     const std::string& query_name,
@@ -97,6 +100,7 @@ void write_alignment(
     const std::string& query_name,
     const uint64_t& query_total_length,
     const uint64_t& query_offset,
+    const bool& query_is_rev,
     const std::string& target_name,
     const uint64_t& target_total_length,
     const uint64_t& target_offset,

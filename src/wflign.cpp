@@ -9,6 +9,7 @@ void wflign_full(
     const uint64_t& query_total_length,
     const uint64_t& query_offset,
     const uint64_t& query_length,
+    const bool& query_is_rev,
     const std::string& target_name,
     const char* target,
     const uint64_t& target_total_length,
@@ -22,17 +23,17 @@ void wflign_full(
         for (uint64_t j = 0; j < query_length - segment_length - 1; j += query_step) {
             alignment_t aln;
             do_alignment(query_name, query, query_length, j, target_name, target, target_length, i, segment_length, query_step, aln);
-            write_alignment(out, aln, query_name, query_total_length, query_offset, target_name, target_total_length, target_offset, min_identity);
+            write_alignment(out, aln, query_name, query_total_length, query_offset, query_is_rev, target_name, target_total_length, target_offset, min_identity);
         }
         // do the last alignment in the row
         alignment_t aln;
         do_alignment(query_name, query, query_length, query_length-segment_length, target_name, target, target_length, i, segment_length, query_step, aln);
-        write_alignment(out, aln, query_name, query_total_length, query_offset, target_name, target_total_length, target_offset, min_identity);
+        write_alignment(out, aln, query_name, query_total_length, query_offset, query_is_rev, target_name, target_total_length, target_offset, min_identity);
     }
     // do the last alignment in the final column
     alignment_t aln;
     do_alignment(query_name, query, query_length, query_length-segment_length, target_name, target, target_length, target_length-segment_length, segment_length, query_step, aln);
-    write_alignment(out, aln, query_name, query_total_length, query_offset, target_name, target_total_length, target_offset, min_identity);
+    write_alignment(out, aln, query_name, query_total_length, query_offset, query_is_rev, target_name, target_total_length, target_offset, min_identity);
 }
 
 void wflign_wavefront(
@@ -42,6 +43,7 @@ void wflign_wavefront(
     const uint64_t& query_total_length,
     const uint64_t& query_offset,
     const uint64_t& query_length,
+    const bool& query_is_rev,
     const std::string& target_name,
     const char* target,
     const uint64_t& target_total_length,
@@ -110,6 +112,7 @@ void wflign_affine_wavefront(
     const uint64_t& query_total_length,
     const uint64_t& query_offset,
     const uint64_t& query_length,
+    const bool& query_is_rev,
     const std::string& target_name,
     const char* target,
     const uint64_t& target_total_length,
@@ -259,7 +262,7 @@ void wflign_affine_wavefront(
             // so we can get account of the length of things that are mapped
             // we'll use that later to recurse into the unaligned bits and allow inversions
             // and other funny things
-            write_alignment(out, **a, query_name, query_total_length, query_offset, target_name, target_total_length, target_offset, min_identity);
+            write_alignment(out, **a, query_name, query_total_length, query_offset, query_is_rev, target_name, target_total_length, target_offset, min_identity);
         }
         x = e;
     }
@@ -315,6 +318,7 @@ void write_alignment(
     const std::string& query_name,
     const uint64_t& query_total_length,
     const uint64_t& query_offset,
+    const bool& query_is_rev,
     const std::string& target_name,
     const uint64_t& target_total_length,
     const uint64_t& target_offset,
@@ -360,7 +364,7 @@ void write_alignment(
                 << "\t" << query_total_length
                 << "\t" << query_offset + aln.j + aln.skip_query_start
                 << "\t" << query_offset + aln.j + aln.skip_query_start + qAlignedLength
-                << "\t" << "+" // todo (currentRecord.strand == skch::strnd::FWD ? "+" : "-")
+                << "\t" << (query_is_rev ? "-" : "+")
                 << "\t" << target_name
                 << "\t" << target_total_length
                 << "\t" << target_offset + alignmentRefPos + skipped_target_start
