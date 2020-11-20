@@ -7,24 +7,25 @@ void wflign_full(
         const std::string& query,
         const std::string& target_name,
         const std::string& target,
-        const uint64_t& segment_length) {
+        const uint64_t& segment_length,
+        const float& min_identity) {
     uint64_t target_step = segment_length / 2;
     uint64_t query_step = segment_length / 2;
     for (uint64_t i = 0; i < target.size() - segment_length - 1; i += target_step) {
         for (uint64_t j = 0; j < query.size() - segment_length - 1; j += query_step) {
             alignment_t aln;
             do_alignment(query_name, query, j, target_name, target, i, segment_length, query_step, aln);
-            std::cout << aln << std::endl;
+            write_alignment(std::cout, aln, min_identity);
         }
         // do the last alignment in the row
         alignment_t aln;
         do_alignment(query_name, query, query.size()-segment_length, target_name, target, i, segment_length, query_step, aln);
-        std::cout << aln << std::endl;
+        write_alignment(std::cout, aln, min_identity);
     }
     // do the last alignment in the final column
     alignment_t aln;
     do_alignment(query_name, query, query.size()-segment_length, target_name, target, target.size()-segment_length, segment_length, query_step, aln);
-    std::cout << aln << std::endl;
+    write_alignment(std::cout, aln, min_identity);
 }
 
 void wflign_wavefront(
@@ -32,6 +33,7 @@ void wflign_wavefront(
     const std::string& query,
     const std::string& target_name,
     const std::string& target,
+    const float& min_identity,
     const uint64_t& segment_length) {
 
     // set up our implicit matrix
@@ -91,6 +93,7 @@ void wflign_affine_wavefront(
     const std::string& target_name,
     const std::string& target,
     const uint64_t& segment_length,
+    const float& min_identity,
     const int& min_wavefront_length,
     const int& max_distance_threshold) {
     // set up our implicit matrix
@@ -186,6 +189,16 @@ void wflign_affine_wavefront(
         pattern_length,
         text_length);
 
+    // get alignment score
+    const int score = wflambda::edit_cigar_score_gap_affine(
+        &affine_wavefronts->edit_cigar,&affine_penalties);
+#ifdef WFLIGN_DEBUG
+    std::cerr << "[wflign::wflign_affine_wavefront] alignment score " << score << " for query: " << query_name << " target: " << target_name << std::endl;
+#endif
+
+    // todo: implement alignment identity based on hash of the input sequences and parameters
+    // and annotate each PAF record with it and the full alignment score
+
     auto x = trace.rbegin();
 
     while (x != trace.rend()) {
@@ -222,14 +235,11 @@ void wflign_affine_wavefront(
             // so we can get account of the length of things that are mapped
             // we'll use that later to recurse into the unaligned bits and allow inversions
             // and other funny things
-            std::cout << **a << std::endl;
+            write_alignment(std::cout, **a, min_identity);
         }
         x = e;
     }
     
-    // Display alignment
-    const int score = wflambda::edit_cigar_score_gap_affine(
-        &affine_wavefronts->edit_cigar,&affine_penalties);
     // Free
     wflambda::affine_wavefronts_delete(affine_wavefronts);
     wflambda::mm_allocator_delete(mm_allocator);
@@ -277,9 +287,11 @@ bool do_alignment(
 }
 
 
-std::ostream& operator<<(
+void write_alignment(
     std::ostream& out,
-    const alignment_t& aln) {
+    const alignment_t& aln,
+    const float& min_identity,
+    const bool& with_endline) {
 //    bool aligned = false;
     //Output to file
     auto& result = aln.result;
@@ -315,32 +327,41 @@ std::ostream& operator<<(
         double total = refAlignedLength + (qAlignedLength - softclips);
         double identity = (double)(total - mismatches * 2 - insertions - deletions) / total;
 
-        out << *aln.query_name
-            << "\t" << aln.query_size
-            << "\t" << aln.j + aln.skip_query_start
-            << "\t" << aln.j + aln.skip_query_start + qAlignedLength
-            << "\t" << "+" // todo (currentRecord.strand == skch::strnd::FWD ? "+" : "-")
-            << "\t" << *aln.target_name
-            << "\t" << aln.target_size
-            << "\t" << alignmentRefPos + skipped_target_start
-            << "\t" << alignmentRefPos + skipped_target_start + refAlignedLength
-            << "\t" << matches
-            << "\t" << std::max(refAlignedLength, qAlignedLength)
-            << "\t" << std::round(float2phred(1.0-identity))
-            << "\t" << "id:f:" << identity
-            << "\t" << "ma:i:" << matches
-            << "\t" << "mm:i:" << mismatches
-            << "\t" << "ni:i:" << insertions
-            << "\t" << "nd:i:" << deletions
-            << "\t" << "ns:i:" << softclips
-            << "\t" << "ed:i:" << result.editDistance
-            << "\t" << "al:i:" << result.alignmentLength
-            << "\t" << "se:f:" << result.editDistance / (double)result.alignmentLength
-            << "\t" << "cg:Z:" << cigar;
-
+        if (identity >= min_identity) {
+            out << *aln.query_name
+                << "\t" << aln.query_size
+                << "\t" << aln.j + aln.skip_query_start
+                << "\t" << aln.j + aln.skip_query_start + qAlignedLength
+                << "\t" << "+" // todo (currentRecord.strand == skch::strnd::FWD ? "+" : "-")
+                << "\t" << *aln.target_name
+                << "\t" << aln.target_size
+                << "\t" << alignmentRefPos + skipped_target_start
+                << "\t" << alignmentRefPos + skipped_target_start + refAlignedLength
+                << "\t" << matches
+                << "\t" << std::max(refAlignedLength, qAlignedLength)
+                << "\t" << std::round(float2phred(1.0-identity))
+                << "\t" << "id:f:" << identity
+                << "\t" << "ma:i:" << matches
+                << "\t" << "mm:i:" << mismatches
+                << "\t" << "ni:i:" << insertions
+                << "\t" << "nd:i:" << deletions
+                << "\t" << "ns:i:" << softclips
+                << "\t" << "ed:i:" << result.editDistance
+                << "\t" << "al:i:" << result.alignmentLength
+                << "\t" << "se:f:" << result.editDistance / (double)result.alignmentLength
+                << "\t" << "cg:Z:" << cigar;
+            if (with_endline) {
+                out << std::endl;
+            }
+        }
         free(cigar);
     }
+}
 
+std::ostream& operator<<(
+    std::ostream& out,
+    const alignment_t& aln) {
+    write_alignment(out, aln, 0, false);
     return out;
 }
 

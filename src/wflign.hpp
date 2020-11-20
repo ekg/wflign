@@ -9,6 +9,8 @@
 #include "wflambda/gap_affine/affine_wavefront_align.hpp"
 #include "wflambda/gap_affine/affine_wavefront_backtrace.hpp"
 
+//#define WFLIGN_DEBUG true // for debugging messages
+
 namespace wflign {
 
 struct alignment_t {
@@ -53,7 +55,8 @@ void wflign_affine_wavefront(
     const std::string& target_name,
     const std::string& target,
     const uint64_t& segment_length,
-    const int& min_wavefront_length = 0,
+    const float& min_identity,
+    const int& min_wavefront_length = 0, // with these set at 0 we do exact WFA
     const int& max_distance_threshold = 0);
 
 bool do_alignment(
@@ -70,6 +73,12 @@ bool do_alignment(
 std::ostream& operator<<(
     std::ostream& out,
     const alignment_t& aln);
+
+void write_alignment(
+    std::ostream& out,
+    const alignment_t& aln,
+    const float& min_identity,
+    const bool& with_endline = true);
 
 char* alignmentToCigar(
     const unsigned char* const alignment,

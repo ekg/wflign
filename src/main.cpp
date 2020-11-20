@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     args::PositionalList<std::string> query_sequence_files(parser, "queries", "query sequences");
     args::ValueFlag<std::string> query_sequence_file_list(parser, "queries", "alignment query file list", {'Q', "query-file-list"});
     args::ValueFlag<uint64_t> p_segment_length(parser, "N", "segment length for aligning [default: 1000]", {'s', "segment-length"});
-    args::ValueFlag<float> min_pct_identity(parser, "%", "use this minimum percent identity [default: 0]", {'I', "min-pct-id"});
+    args::ValueFlag<float> min_pct_identity(parser, "%", "only emit alignments above this percent identity [default: 0]", {'I', "min-pct-id"});
     args::ValueFlag<int> wf_min(parser, "N", "WF_min: minimum length of a wavefront to trigger reduction [default: 100]", {'l', "wf-min"});
     args::ValueFlag<int> wf_diff(parser, "N", "WF_diff: maximum distance that a wavefront may be behind the best wavefront to not be reduced [default: 50]", {'d', "wf-diff"});
     args::Flag exact_wfa(parser, "N", "compute the exact WFA, don't use adaptive wavefront reduction", {'e', "exact-wfa"});
@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
     uint64_t segment_length = p_segment_length ? args::get(p_segment_length) : 1000;
     uint64_t min_wavefront_length = wf_min ? args::get(wf_min) : 100;
     uint64_t max_distance_threshold = wf_diff ? args::get(wf_diff) : 200;
+    float min_identity = min_pct_identity ? args::get(min_pct_identity) / 100 : 0;
 
     // exact WFA is triggered by setting the reduction parameters to 0
     if (args::get(exact_wfa)) {
@@ -95,6 +96,7 @@ int main(int argc, char** argv) {
                                 qname, qseq,
                                 tname, tseq,
                                 segment_length,
+                                min_identity,
                                 min_wavefront_length,
                                 max_distance_threshold);
                         });
