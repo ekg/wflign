@@ -367,8 +367,8 @@ void write_alignment(
                 << "\t" << (query_is_rev ? "-" : "+")
                 << "\t" << target_name
                 << "\t" << target_total_length
-                << "\t" << target_offset + alignmentRefPos + skipped_target_start
-                << "\t" << target_offset + alignmentRefPos + skipped_target_start + refAlignedLength
+                << "\t" << target_offset + alignmentRefPos + skipped_target_start // + (query_is_rev ? 1 : 0)  // wtf.not this simple...
+                << "\t" << target_offset + alignmentRefPos + skipped_target_start + refAlignedLength // + (query_is_rev ? 1 : 0)
                 << "\t" << matches
                 << "\t" << std::max(refAlignedLength, qAlignedLength)
                 << "\t" << std::round(float2phred(1.0-identity))

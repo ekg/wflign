@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
     args::ValueFlag<int> wf_min(parser, "N", "WF_min: minimum length of a wavefront to trigger reduction [default: 100]", {'l', "wf-min"});
     args::ValueFlag<int> wf_diff(parser, "N", "WF_diff: maximum distance that a wavefront may be behind the best wavefront to not be reduced [default: 50]", {'d', "wf-diff"});
     args::Flag exact_wfa(parser, "N", "compute the exact WFA, don't use adaptive wavefront reduction", {'e', "exact-wfa"});
+    args::Flag revcomp_query(parser, "N", "align the reverse complement of the query", {'r', "revcomp-query"});
 
     // general parameters
     //args::Flag show_progress(parser, "show-progress", "write alignment progress to stderr", {'P', "show-progress"});
@@ -80,6 +81,7 @@ int main(int argc, char** argv) {
         min_wavefront_length = 0;
         max_distance_threshold = 0;
     }
+    bool revcomp = args::get(revcomp_query);
 
     // simple all-vs-all mapping for testing
     for (auto& query_file : queries) {
@@ -87,6 +89,9 @@ int main(int argc, char** argv) {
             query_file,
             [&](const std::string& qname,
                 const std::string& qseq) {
+                std::string qstrand = revcomp ?
+                    wflign::reverse_complement(qseq)
+                    : qseq;
                 for (auto& target_file : targets) {
                     seqiter::for_each_seq_in_file(
                         target_file,
@@ -94,8 +99,8 @@ int main(int argc, char** argv) {
                             const std::string& tseq) {
                             wflign::wflign_affine_wavefront(
                                 std::cout,
-                                qname, qseq.c_str(), qseq.size(), 0, qseq.size(),
-                                false, // query is rev
+                                qname, qstrand.c_str(), qstrand.size(), 0, qstrand.size(),
+                                revcomp,
                                 tname, tseq.c_str(), tseq.size(), 0, tseq.size(),
                                 segment_length,
                                 min_identity,
