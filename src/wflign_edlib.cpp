@@ -1,6 +1,8 @@
-#include "wflign.hpp"
+#include "wflign_edlib.hpp"
 
 namespace wflign {
+
+namespace edlib {
 
 void wflign_full(
     std::ostream& out,
@@ -528,6 +530,8 @@ double float2phred(const double& prob) {
         return 255;
     else
         return p;
+}
+
 }
 
 }

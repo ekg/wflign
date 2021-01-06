@@ -1,7 +1,7 @@
 #include <iostream>
 #include "args.hxx"
 #include "seqiter.hpp"
-#include "wflign.hpp"
+#include "wflign_edlib.hpp"
 
 void parse_file_list(const std::string& file,
                      std::vector<std::string>& files) {
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
                         target_file,
                         [&](const std::string& tname,
                             const std::string& tseq) {
-                            wflign::wflign_affine_wavefront(
+                            wflign::edlib::wflign_affine_wavefront(
                                 std::cout,
                                 qname, qstrand.c_str(), qstrand.size(), 0, qstrand.size(),
                                 revcomp,

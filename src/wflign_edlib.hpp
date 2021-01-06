@@ -14,6 +14,8 @@
 
 namespace wflign {
 
+namespace edlib {
+
 struct alignment_t {
     int j = 0;
     int i = 0;
@@ -126,5 +128,7 @@ char* alignmentToCigar(
     uint64_t& softclips);
 
 double float2phred(const double& prob);
+
+}
 
 }

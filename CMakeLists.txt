@@ -22,7 +22,7 @@ add_subdirectory(deps/WFA EXCLUDE_FROM_ALL)
 
 add_executable(wflign
   src/main.cpp
-  src/wflign.cpp
+  src/wflign_edlib.cpp
   src/wfa_edit_callback.cpp)
 
 target_include_directories(wflign PRIVATE
@@ -34,7 +34,7 @@ target_link_libraries(wflign
   wflambda
   z)
 
-add_library(libwflign_static STATIC src/wflign.cpp src/wfa_edit_callback.cpp)
+add_library(libwflign_static STATIC src/wflign_edlib.cpp src/wfa_edit_callback.cpp)
 set_target_properties(libwflign_static PROPERTIES OUTPUT_NAME "wflign")
 target_include_directories(libwflign_static PRIVATE
   deps/
