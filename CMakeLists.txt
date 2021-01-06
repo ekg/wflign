@@ -18,6 +18,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory(deps/edlib EXCLUDE_FROM_ALL)
 add_subdirectory(deps/wflambda EXCLUDE_FROM_ALL)
+add_subdirectory(deps/WFA EXCLUDE_FROM_ALL)
 
 add_executable(wflign
   src/main.cpp
