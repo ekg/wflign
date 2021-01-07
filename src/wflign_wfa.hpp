@@ -21,7 +21,7 @@ namespace wavefront {
 struct alignment_t {
     int j = 0;
     int i = 0;
-    double identity = 0;
+    int score = std::numeric_limits<int>::max();
     int skip_query_start = 0;
     int keep_query_length = 0;
     int skip_target_start = 0;
@@ -70,9 +70,9 @@ void wflign_affine_wavefront(
     const uint64_t& segment_length,
     const float& min_identity,
     const int& wflambda_min_wavefront_length, // with these set at 0 we do exact WFA for wflambda
-    const int& wflambda_max_distance_threshold,
-    const int& wfa_min_wavefront_length, // with these set at 0 we do exact WFA for WFA itself
-    const int& wfa_max_distance_threshold);
+    const int& wflambda_max_distance_threshold);
+    //const int& wfa_min_wavefront_length, // with these set at 0 we do exact WFA for WFA itself
+    //const int& wfa_max_distance_threshold);
 
 bool do_alignment(
     const std::string& query_name,
@@ -104,7 +104,6 @@ void write_alignment(
 
 char* alignmentToCigar(
     const wfa::edit_cigar_t* const edit_cigar,
-    const int alignmentLength,
     const int skip_query_start,
     const int keep_query_length,
     int& skipped_target_start,

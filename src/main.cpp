@@ -30,7 +30,9 @@ int main(int argc, char** argv) {
     args::ValueFlag<float> min_pct_identity(parser, "%", "only emit alignments above this percent identity [default: 0]", {'I', "min-pct-id"});
     args::ValueFlag<int> wf_min(parser, "N", "WF_min: minimum length of a wavefront to trigger reduction [default: 100]", {'l', "wf-min"});
     args::ValueFlag<int> wf_diff(parser, "N", "WF_diff: maximum distance that a wavefront may be behind the best wavefront to not be reduced [default: 50]", {'d', "wf-diff"});
-    args::Flag exact_wfa(parser, "N", "compute the exact WFA, don't use adaptive wavefront reduction", {'e', "exact-wfa"});
+    args::Flag exact_wflign(parser, "N", "compute the exact WFA for wflign, don't use adaptive wavefront reduction", {'e', "exact-wflign"});
+    //args::Flag exact_wfa(parser, "N", "compute the exact WFA for base-level WFA, don't use adaptive wavefront reduction", {'E', "exact-wfa"});
+    args::Flag align_edlib(parser, "N", "use edlib for base-level alignment", {'a', "edlib-align"});
     args::Flag revcomp_query(parser, "N", "align the reverse complement of the query", {'r', "revcomp-query"});
 
     // general parameters
@@ -78,7 +80,7 @@ int main(int argc, char** argv) {
     float min_identity = min_pct_identity ? args::get(min_pct_identity) / 100 : 0;
 
     // exact WFA is triggered by setting the reduction parameters to 0
-    if (args::get(exact_wfa)) {
+    if (args::get(exact_wflign)) {
         min_wavefront_length = 0;
         max_distance_threshold = 0;
     }
@@ -98,15 +100,27 @@ int main(int argc, char** argv) {
                         target_file,
                         [&](const std::string& tname,
                             const std::string& tseq) {
-                            wflign::edlib::wflign_affine_wavefront(
-                                std::cout,
-                                qname, qstrand.c_str(), qstrand.size(), 0, qstrand.size(),
-                                revcomp,
-                                tname, tseq.c_str(), tseq.size(), 0, tseq.size(),
-                                segment_length,
-                                min_identity,
-                                min_wavefront_length,
-                                max_distance_threshold);
+                            if (align_edlib) {
+                                wflign::edlib::wflign_affine_wavefront(
+                                    std::cout,
+                                    qname, qstrand.c_str(), qstrand.size(), 0, qstrand.size(),
+                                    revcomp,
+                                    tname, tseq.c_str(), tseq.size(), 0, tseq.size(),
+                                    segment_length,
+                                    min_identity,
+                                    min_wavefront_length,
+                                    max_distance_threshold);
+                            } else {
+                                wflign::wavefront::wflign_affine_wavefront(
+                                    std::cout,
+                                    qname, qstrand.c_str(), qstrand.size(), 0, qstrand.size(),
+                                    revcomp,
+                                    tname, tseq.c_str(), tseq.size(), 0, tseq.size(),
+                                    segment_length,
+                                    min_identity,
+                                    min_wavefront_length,
+                                    max_distance_threshold);
+                            }
                         });
                 }
             });

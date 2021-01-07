@@ -20,9 +20,9 @@ void wflign_affine_wavefront(
     const uint64_t& segment_length,
     const float& min_identity,
     const int& wflambda_min_wavefront_length, // with these set at 0 we do exact WFA for wflambda
-    const int& wflambda_max_distance_threshold,
-    const int& wfa_min_wavefront_length, // with these set at 0 we do exact WFA for WFA itself
-    const int& wfa_max_distance_threshold) {
+    const int& wflambda_max_distance_threshold) {
+    //const int& wfa_min_wavefront_length, // with these set at 0 we do exact WFA for WFA itself
+    //const int& wfa_max_distance_threshold) {
 
     // set up our implicit matrix
     uint64_t steps_per_segment = 2;
@@ -31,6 +31,9 @@ void wflign_affine_wavefront(
     // Pattern & Text
     const int pattern_length = query_length / step_size;
     const int text_length = target_length / step_size;
+
+    const int wfa_min_wavefront_length = segment_length / 10;
+    const int wfa_max_distance_threshold = segment_length / 2;
 
     // Allocate MM
     wflambda::mm_allocator_t* const wflambda_mm_allocator = wflambda::mm_allocator_new(BUFFER_SIZE_8M);
@@ -202,24 +205,13 @@ bool do_alignment(
     const uint64_t& step_size,
     alignment_t& aln) {
 
-    /*
-    auto edlib_config = edlibNewAlignConfig(step_size,
-                                            EDLIB_MODE_NW,
-                                            EDLIB_TASK_PATH,
-                                            NULL, 0);
-
-    aln.result = edlibAlign(query+j, segment_length,
-                            target+i, segment_length,
-                            edlib_config);
+    aln.score = wfa::affine_wavefronts_align(
+        aln.affine_wavefronts, query+j, segment_length, target+i, segment_length);
 
     aln.j = j;
     aln.i = i;
 
-    return aln.result.status == EDLIB_STATUS_OK
-        && aln.result.alignmentLength != 0
-        && aln.result.editDistance >= 0;
-    */
-    return true;
+    return aln.score < segment_length;
 }
 
 
@@ -239,10 +231,15 @@ void write_alignment(
     const bool& with_endline) {
 //    bool aligned = false;
     //Output to file
-    auto& result = aln.result;
-    if (result.status == EDLIB_STATUS_OK
+    //auto& result = aln.result;
+    //if (aln.score < 10) {
+    {
+
+        /*
+        if (result.status == EDLIB_STATUS_OK
         && result.alignmentLength != 0
         && result.editDistance >= 0) {
+        */
 
         uint64_t matches = 0;
         uint64_t mismatches = 0;
@@ -254,8 +251,7 @@ void write_alignment(
         int skipped_target_start = 0;
         int kept_target_length = 0;
 
-        char* cigar = alignmentToCigar(result.alignment,
-                                       result.alignmentLength,
+        char* cigar = alignmentToCigar(&aln.affine_wavefronts->edit_cigar,
                                        aln.skip_query_start,
                                        aln.keep_query_length,
                                        skipped_target_start,
@@ -268,9 +264,10 @@ void write_alignment(
                                        deletions,
                                        softclips);
 
-        size_t alignmentRefPos = aln.i + result.startLocations[0];
+        size_t alignmentRefPos = aln.i;
         double total = refAlignedLength + (qAlignedLength - softclips);
         double identity = (double)(total - mismatches * 2 - insertions - deletions) / total;
+        std::cerr << " identity is " << identity << std::endl;
         // convert our coordinates to be relative to forward strand (matching PAF standard)
         uint64_t q_start;
         if (query_is_rev) {
@@ -291,15 +288,13 @@ void write_alignment(
                 << "\t" << matches
                 << "\t" << std::max(refAlignedLength, qAlignedLength)
                 << "\t" << std::round(float2phred(1.0-identity))
+                << "\t" << "as:i:" << aln.score
                 << "\t" << "id:f:" << identity
                 << "\t" << "ma:i:" << matches
                 << "\t" << "mm:i:" << mismatches
                 << "\t" << "ni:i:" << insertions
                 << "\t" << "nd:i:" << deletions
                 << "\t" << "ns:i:" << softclips
-                << "\t" << "ed:i:" << result.editDistance
-                << "\t" << "al:i:" << result.alignmentLength
-                << "\t" << "se:f:" << result.editDistance / (double)result.alignmentLength
                 << "\t" << "cg:Z:" << cigar;
             if (with_endline) {
                 out << std::endl;
@@ -310,8 +305,7 @@ void write_alignment(
 }
 
 char* alignmentToCigar(
-    const edit_cigar_t* const edit_cigar,
-    const int alignmentLength,
+    const wfa::edit_cigar_t* const edit_cigar,
     const int skip_query_start,
     const int keep_query_length,
     int& skipped_target_start,
@@ -333,10 +327,15 @@ char* alignmentToCigar(
     int numOfSameMoves = 0;
     //bool in_keep = false;
     int seen_query = 0;
-    int start_idx = 0;
-    while (start_idx < alignmentLength
+    int start_idx = edit_cigar->begin_offset;
+
+    //for (int i = edit_cigar->begin_offset; i <= edit_cigar->end_offset; ++i) {
+    //    if (i == edit_cigar->end_offset || (edit_cigar->operations[i] != lastMove && lastMove != 0)) {
+    
+    while (start_idx < edit_cigar->end_offset
            && seen_query < skip_query_start) {
-        switch (moveCodeToChar[alignment[start_idx++]]) {
+        switch (edit_cigar->operations[start_idx++]) {
+        case 'M':
         case 'X':
         case '=':
             ++skipped_target_start;
@@ -354,9 +353,10 @@ char* alignmentToCigar(
     }
     int end_idx = start_idx;
     seen_query = 0;
-    while (end_idx < alignmentLength
+    while (end_idx < edit_cigar->end_offset
         && seen_query < keep_query_length) {
-        switch (moveCodeToChar[alignment[end_idx++]]) {
+        switch (edit_cigar->operations[end_idx++]) {
+        case 'M':
         case 'X':
         case '=':
             ++kept_target_length;
@@ -373,11 +373,11 @@ char* alignmentToCigar(
         }
     }
     if (end_idx == start_idx) {
-        end_idx = alignmentLength;
+        end_idx = edit_cigar->end_offset;
     }
     for (int i = start_idx; i <= end_idx; i++) {
         // if new sequence of same moves started
-        if (i == end_idx || (moveCodeToChar[alignment[i]] != lastMove && lastMove != 0)) {
+        if (i == end_idx || (edit_cigar->operations[i] != lastMove && lastMove != 0)) {
             // calculate matches, mismatches, insertions, deletions
             switch (lastMove) {
             case 'I':
@@ -389,6 +389,7 @@ char* alignmentToCigar(
                 }
                 qAlignedLength += numOfSameMoves;
                 break;
+            case 'M':
             case '=':
                 matches += numOfSameMoves;
                 qAlignedLength += numOfSameMoves;
@@ -418,16 +419,11 @@ char* alignmentToCigar(
             cigar->push_back(lastMove);
             // If not at the end, start new sequence of moves.
             if (i < end_idx) {
-                // Check if alignment has valid values.
-                if (alignment[i] > 3) {
-                    delete cigar;
-                    return 0;
-                }
                 numOfSameMoves = 0;
             }
         }
         if (i < end_idx) {
-            lastMove = moveCodeToChar[alignment[i]];
+            lastMove = edit_cigar->operations[i];
             numOfSameMoves++;
         }
     }
