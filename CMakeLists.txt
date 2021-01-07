@@ -23,6 +23,7 @@ add_subdirectory(deps/WFA EXCLUDE_FROM_ALL)
 add_executable(wflign
   src/main.cpp
   src/wflign_edlib.cpp
+  src/wflign_wfa.cpp
   src/wfa_edit_callback.cpp)
 
 target_include_directories(wflign PRIVATE
@@ -31,6 +32,7 @@ target_include_directories(wflign PRIVATE
 
 target_link_libraries(wflign
   edlib
+  wfa
   wflambda
   z)
 
