@@ -57,8 +57,8 @@ void wflign_affine_wavefront(
     // save this in a pair-indexed patchmap
 
     // setup affine WFA
-    mm_allocator_t* const wfa_mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
-    affine_penalties_t wfa_affine_penalties = {
+    wfa::mm_allocator_t* const wfa_mm_allocator = wfa::mm_allocator_new(BUFFER_SIZE_8M);
+    wfa::affine_penalties_t wfa_affine_penalties = {
         .match = 0,
         .mismatch = 4,
         .gap_opening = 6,
@@ -138,7 +138,7 @@ void wflign_affine_wavefront(
 
     // get alignment score
     const int score = wflambda::edit_cigar_score_gap_affine(
-        &affine_wavefronts->edit_cigar,&affine_penalties);
+        &affine_wavefronts->edit_cigar, &wflambda_affine_penalties);
 #ifdef WFLIGN_DEBUG
     std::cerr << "[wflign::wflign_affine_wavefront] alignment score " << score << " for query: " << query_name << " target: " << target_name << std::endl;
 #endif
@@ -177,7 +177,7 @@ void wflign_affine_wavefront(
 
     // Free
     wflambda::affine_wavefronts_delete(affine_wavefronts);
-    wflambda::mm_allocator_delete(mm_allocator);
+    wflambda::mm_allocator_delete(wflambda_mm_allocator);
     for (const auto& p : alignments) {
         delete p.second;
     }

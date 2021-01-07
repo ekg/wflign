@@ -18,8 +18,6 @@ namespace wflign {
 
 namespace wavefront {
 
-using namespace wfa;
-
 struct alignment_t {
     int j = 0;
     int i = 0;
@@ -28,13 +26,13 @@ struct alignment_t {
     int keep_query_length = 0;
     int skip_target_start = 0;
     int keep_target_length = 0;
-    affine_wavefronts_t* affine_wavefronts = nullptr;
+    wfa::affine_wavefronts_t* affine_wavefronts = nullptr;
     alignment_t(int text_length,
                 int pattern_length,
                 int min_wavefront_length,
                 int max_distance_threshold,
-                mm_allocator_t* const mm_allocator,
-                const affine_penalties_t& affine_penalties) {
+                wfa::mm_allocator_t* const mm_allocator,
+                const wfa::affine_penalties_t& affine_penalties) {
         if (min_wavefront_length || max_distance_threshold) {
             // adaptive affine WFA setup
             affine_wavefronts = affine_wavefronts_new_reduced(
@@ -105,7 +103,7 @@ void write_alignment(
     const bool& with_endline = true);
 
 char* alignmentToCigar(
-    const edit_cigar_t* const edit_cigar,
+    const wfa::edit_cigar_t* const edit_cigar,
     const int alignmentLength,
     const int skip_query_start,
     const int keep_query_length,
