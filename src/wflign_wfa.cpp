@@ -267,7 +267,6 @@ void write_alignment(
         size_t alignmentRefPos = aln.i;
         double total = refAlignedLength + (qAlignedLength - softclips);
         double identity = (double)(total - mismatches * 2 - insertions - deletions) / total;
-        std::cerr << " identity is " << identity << std::endl;
         // convert our coordinates to be relative to forward strand (matching PAF standard)
         uint64_t q_start;
         if (query_is_rev) {
