@@ -26,29 +26,15 @@ struct alignment_t {
     int keep_query_length = 0;
     int skip_target_start = 0;
     int keep_target_length = 0;
-    wfa::affine_wavefronts_t* affine_wavefronts = nullptr;
-    alignment_t(int text_length,
-                int pattern_length,
-                int min_wavefront_length,
-                int max_distance_threshold,
-                wfa::mm_allocator_t* const mm_allocator,
-                const wfa::affine_penalties_t& affine_penalties) {
-        if (min_wavefront_length || max_distance_threshold) {
-            // adaptive affine WFA setup
-            affine_wavefronts = affine_wavefronts_new_reduced(
-                pattern_length, text_length, (wfa::affine_penalties_t*)&affine_penalties,
-                min_wavefront_length, max_distance_threshold,
-                NULL, mm_allocator);
-        } else {
-            // exact WFA
-            affine_wavefronts = affine_wavefronts_new_complete(
-                pattern_length, text_length, (wfa::affine_penalties_t*)&affine_penalties, NULL, mm_allocator);
-        }
-    }
+    wfa::edit_cigar_t edit_cigar;
     ~alignment_t(void) {
-        affine_wavefronts_delete(affine_wavefronts);
+        free(edit_cigar.operations);
     }
 };
+
+void wflign_edit_cigar_copy(
+    wfa::edit_cigar_t* const edit_cigar_dst,
+    wfa::edit_cigar_t* const edit_cigar_src);
 
 inline uint64_t encode_pair(int v, int h) {
     return ((uint64_t)v << 32) | (uint64_t)h;
@@ -85,6 +71,10 @@ bool do_alignment(
     const uint64_t& i,
     const uint64_t& segment_length,
     const uint64_t& step_size,
+    const int min_wavefront_length,
+    const int max_distance_threshold,
+    wfa::mm_allocator_t* const mm_allocator,
+    wfa::affine_penalties_t* const affine_penalties,
     alignment_t& aln);
 
 void write_alignment(

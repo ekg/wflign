@@ -156,7 +156,8 @@ void wflign_affine_wavefront(
 
     whash::patchmap<uint64_t,alignment_t*> alignments;
     // save this in a pair-indexed patchmap
-
+    std::cerr << "v" << "\t" << "h" << "\t" << "score" << "\t" << "aligned" << std::endl;
+    
     auto extend_match =
         [&](const int& v,
             const int& h) {
@@ -187,6 +188,7 @@ void wflign_affine_wavefront(
                             segment_length,
                             step_size,
                             *aln);
+                    std::cerr << v << "\t" << h << "\t" << aln->result.editDistance << "\t" << aligned << std::endl;
                     if (aligned) {
                         alignments[k] = aln;
                     } else {

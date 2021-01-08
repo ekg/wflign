@@ -45,3 +45,5 @@ target_include_directories(libwflign_static PRIVATE
   deps/edlib/edlib/include)
 # not clear if necessary
 #set_target_properties(libodgi_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+
+#set(CMAKE_BUILD_TYPE Release)
