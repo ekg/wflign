@@ -268,17 +268,22 @@ bool do_alignment(
         }
 
         aln.score = wfa::affine_wavefronts_align_bounded(
-            affine_wavefronts, query+j, segment_length, target+i, segment_length, segment_length);
+            affine_wavefronts,
+            target+i,
+            segment_length,
+            query+j,
+            segment_length,
+            segment_length);
 
         aln.j = j;
         aln.i = i;
         // copy our edit cigar
         wflign_edit_cigar_copy(&aln.edit_cigar, &affine_wavefronts->edit_cigar);
-        // reassign 'M' to '=' for convenience
-        for (int i = aln.edit_cigar.begin_offset; i < aln.edit_cigar.end_offset; ++i) {
-            auto& op = aln.edit_cigar.operations[i];
-            if (op == 'M') op = '=';
-        }
+
+        //for (int i = aln.edit_cigar.begin_offset; i < aln.edit_cigar.end_offset; ++i) {
+        //auto& op = aln.edit_cigar.operations[i];
+        //if (op == 'M') op = '=';
+        //}
         affine_wavefronts_delete(affine_wavefronts); // cleanup wavefronts to keep memory low
 
         return aln.score < segment_length;
@@ -388,24 +393,19 @@ char* alignmentToCigar(
     uint64_t& deletions,
     uint64_t& softclips) {
 
-    // Maps move code from alignment to char in cigar.
-    //                        0    1    2    3
-    //char moveCodeToChar[] = {'=', 'I', 'D', 'X'};
+    // the edit cigar contains a character string of ops
+    // here we compress them into the standard cigar representation
 
     std::vector<char>* cigar = new std::vector<char>();
     char lastMove = 0;  // Char of last move. 0 if there was no previous move.
     int numOfSameMoves = 0;
-    //bool in_keep = false;
     int seen_query = 0;
     int start_idx = edit_cigar->begin_offset;
 
-    //for (int i = edit_cigar->begin_offset; i <= edit_cigar->end_offset; ++i) {
-    //    if (i == edit_cigar->end_offset || (edit_cigar->operations[i] != lastMove && lastMove != 0)) {
-    
     while (start_idx < edit_cigar->end_offset
            && seen_query < skip_query_start) {
         switch (edit_cigar->operations[start_idx++]) {
-        case '=':
+        case 'M':
         case 'X':
             ++skipped_target_start;
             ++seen_query;
@@ -425,7 +425,7 @@ char* alignmentToCigar(
     while (end_idx < edit_cigar->end_offset
         && seen_query < keep_query_length) {
         switch (edit_cigar->operations[end_idx++]) {
-        case '=':
+        case 'M':
         case 'X':
             ++kept_target_length;
             ++seen_query;
@@ -448,7 +448,7 @@ char* alignmentToCigar(
         if (i == end_idx || (edit_cigar->operations[i] != lastMove && lastMove != 0)) {
             // calculate matches, mismatches, insertions, deletions
             switch (lastMove) {
-            case '=':
+            case 'M':
                 matches += numOfSameMoves;
                 qAlignedLength += numOfSameMoves;
                 refAlignedLength += numOfSameMoves;
@@ -483,6 +483,8 @@ char* alignmentToCigar(
             }
             std::reverse(cigar->end() - numDigits, cigar->end());
             // Write code of move to cigar string.
+            // reassign 'M' to '=' for convenience
+            lastMove = lastMove == 'M' ? '=' : lastMove;
             cigar->push_back(lastMove);
             // If not at the end, start new sequence of moves.
             if (i < end_idx) {
