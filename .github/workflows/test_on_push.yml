@@ -1,0 +1,27 @@
+on: [push]
+
+name: build and test
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install required packages
+        run: sudo apt-get update && sudo apt-get install -y
+          git
+          bash
+          cmake
+          make
+          g++
+          python3-dev
+          libatomic-ops-dev
+          autoconf
+          libgsl-dev
+          zlib1g-dev
+      - name: Init and update submodules
+        run: git submodule update --init --recursive
+      - name: Build wflign
+        run: cmake -H. -Bbuild && cmake --build build -- -j 2
+      - name: Run a test with a subset of the LPA dataset
+        run: ./bin/wflign data/LPA.subset.fa data/LPA.subset.fa
