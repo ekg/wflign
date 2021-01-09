@@ -36,12 +36,16 @@ target_link_libraries(wflign
   wflambda
   z)
 
-add_library(libwflign_static STATIC src/wflign_edlib.cpp src/wfa_edit_callback.cpp)
+add_library(libwflign_static STATIC
+  src/wflign_edlib.cpp
+  src/wflign_wfa.cpp
+  src/wfa_edit_callback.cpp)
 set_target_properties(libwflign_static PROPERTIES OUTPUT_NAME "wflign")
 target_include_directories(libwflign_static PRIVATE
   deps/
   deps/patchmap
   deps/wflambda
+  deps/WFA
   deps/edlib/edlib/include)
 # not clear if necessary
 #set_target_properties(libodgi_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
