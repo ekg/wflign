@@ -44,7 +44,8 @@ typedef uint64_t hash_t;
 
 std::vector<hash_t> hash_sequence(const char* seq,
                                   const uint64_t& len,
-                                  const uint64_t& k);
+                                  const uint64_t& k,
+                                  const uint64_t& sketch_size);
 
 double compare(const std::vector<hash_t>& alpha, const std::vector<hash_t>& beta, const uint64_t& k);
 
