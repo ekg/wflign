@@ -24,4 +24,4 @@ jobs:
       - name: Build wflign
         run: cmake -H. -Bbuild && cmake --build build -- -j 2
       - name: Run a test with a subset of the LPA dataset
-        run: ./build/bin/wflign data/LPA.subset.fa data/LPA.subset.fa
+        run: ./build/bin/wflign data/LPA.subset.fa data/LPA.subset.fa > LPA.subset.paf && head LPA.subset.paf
