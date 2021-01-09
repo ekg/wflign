@@ -279,12 +279,8 @@ bool do_alignment(
         aln.i = i;
         // copy our edit cigar
         wflign_edit_cigar_copy(&aln.edit_cigar, &affine_wavefronts->edit_cigar);
-
-        //for (int i = aln.edit_cigar.begin_offset; i < aln.edit_cigar.end_offset; ++i) {
-        //auto& op = aln.edit_cigar.operations[i];
-        //if (op == 'M') op = '=';
-        //}
-        affine_wavefronts_delete(affine_wavefronts); // cleanup wavefronts to keep memory low
+        // cleanup wavefronts to keep memory low
+        affine_wavefronts_delete(affine_wavefronts);
 
         return aln.score < segment_length;
     }
