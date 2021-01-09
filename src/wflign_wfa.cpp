@@ -56,8 +56,13 @@ void wflign_affine_wavefront(
             pattern_length, text_length, &wflambda_affine_penalties, NULL, wflambda_mm_allocator);
     }
 
+    // save computed alignments in a pair-indexed patchmap
     whash::patchmap<uint64_t,alignment_t*> alignments;
-    // save this in a pair-indexed patchmap
+
+    // allocate vectors to store our sketches
+    std::vector<std::vector<rkmh::hash_t>*> query_sketches(pattern_length, nullptr);
+    std::vector<std::vector<rkmh::hash_t>*> target_sketches(text_length, nullptr);
+
     //std::cerr << "v" << "\t" << "h" << "\t" << "score" << "\t" << "aligned" << std::endl;
 
     // setup affine WFA
@@ -68,6 +73,7 @@ void wflign_affine_wavefront(
         .gap_opening = 6,
         .gap_extension = 2,
     };
+    const uint64_t minhash_kmer_size = 17;
 
     auto extend_match =
         [&](const int& v,
@@ -90,14 +96,17 @@ void wflign_affine_wavefront(
                         do_alignment(
                             query_name,
                             query,
+                            query_sketches[v],
                             query_length,
                             query_begin,
                             target_name,
                             target,
+                            target_sketches[h],
                             target_length,
                             target_begin,
                             segment_length,
                             step_size,
+                            minhash_kmer_size,
                             wfa_min_wavefront_length,
                             wfa_max_distance_threshold,
                             wfa_mm_allocator,
@@ -145,6 +154,19 @@ void wflign_affine_wavefront(
 #ifdef WFLIGN_DEBUG
     std::cerr << "[wflign::wflign_affine_wavefront] alignment score " << score << " for query: " << query_name << " target: " << target_name << std::endl;
 #endif
+
+    // clean up sketches
+    for (auto& s : query_sketches) {
+        if (s != nullptr) delete s;
+        s = nullptr;
+    }
+    for (auto& s : target_sketches) {
+        if (s != nullptr) delete s;
+        s = nullptr;
+    }
+
+    // clean up our WFA allocator
+    wfa::mm_allocator_delete(wfa_mm_allocator);
 
     // todo: implement alignment identifier based on hash of the input, params, and commit
     // annotate each PAF record with it and the full alignment score
@@ -194,43 +216,73 @@ void wflign_affine_wavefront(
 bool do_alignment(
     const std::string& query_name,
     const char* query,
+    std::vector<rkmh::hash_t>*& query_sketch,
     const uint64_t& query_length,
     const uint64_t& j,
     const std::string& target_name,
     const char* target,
+    std::vector<rkmh::hash_t>*& target_sketch,
     const uint64_t& target_length,
     const uint64_t& i,
     const uint64_t& segment_length,
     const uint64_t& step_size,
+    const uint64_t& minhash_kmer_size,
     const int min_wavefront_length,
     const int max_distance_threshold,
     wfa::mm_allocator_t* const mm_allocator,
     wfa::affine_penalties_t* const affine_penalties,
     alignment_t& aln) {
 
-    //const wfa::affine_penalties_t& affine_penalties) {
-    wfa::affine_wavefronts_t* affine_wavefronts;
-    if (min_wavefront_length || max_distance_threshold) {
-        // adaptive affine WFA setup
-        affine_wavefronts = affine_wavefronts_new_reduced(
-            segment_length, segment_length, affine_penalties,
-            min_wavefront_length, max_distance_threshold,
-            NULL, mm_allocator);
-    } else {
-        // exact WFA
-        affine_wavefronts = affine_wavefronts_new_complete(
-            segment_length, segment_length, affine_penalties, NULL, mm_allocator);
+    // first make the sketches if we haven't yet
+    if (query_sketch == nullptr) {
+        query_sketch = new std::vector<rkmh::hash_t>();
+        *query_sketch = rkmh::hash_sequence(query+j, segment_length, minhash_kmer_size);
+    }
+    if (target_sketch == nullptr) {
+        target_sketch = new std::vector<rkmh::hash_t>();
+        *target_sketch = rkmh::hash_sequence(target+i, segment_length, minhash_kmer_size);
     }
 
-    aln.score = wfa::affine_wavefronts_align_bounded(
-        affine_wavefronts, query+j, segment_length, target+i, segment_length, segment_length);
+    // first check if our mash dist is inbounds
+    double mash_dist = rkmh::compare(*query_sketch, *target_sketch, minhash_kmer_size);
 
-    aln.j = j;
-    aln.i = i;
-    wflign_edit_cigar_copy(&aln.edit_cigar, &affine_wavefronts->edit_cigar);
-    affine_wavefronts_delete(affine_wavefronts);
+    // the mash distance is generally overestimated
+    // but when it's very high we are almost certain that it's not a match
+    if (mash_dist > 0.9) {
+        // if it isn't, return false
+        aln.score = segment_length;
+        return false;
+    } else {
+        // if it is, we'll align
+        wfa::affine_wavefronts_t* affine_wavefronts;
+        if (min_wavefront_length || max_distance_threshold) {
+            // adaptive affine WFA setup
+            affine_wavefronts = affine_wavefronts_new_reduced(
+                segment_length, segment_length, affine_penalties,
+                min_wavefront_length, max_distance_threshold,
+                NULL, mm_allocator);
+        } else {
+            // exact WFA
+            affine_wavefronts = affine_wavefronts_new_complete(
+                segment_length, segment_length, affine_penalties, NULL, mm_allocator);
+        }
 
-    return aln.score < segment_length;
+        aln.score = wfa::affine_wavefronts_align_bounded(
+            affine_wavefronts, query+j, segment_length, target+i, segment_length, segment_length);
+
+        aln.j = j;
+        aln.i = i;
+        // copy our edit cigar
+        wflign_edit_cigar_copy(&aln.edit_cigar, &affine_wavefronts->edit_cigar);
+        // reassign 'M' to '=' for convenience
+        for (int i = aln.edit_cigar.begin_offset; i < aln.edit_cigar.end_offset; ++i) {
+            auto& op = aln.edit_cigar.operations[i];
+            if (op == 'M') op = '=';
+        }
+        affine_wavefronts_delete(affine_wavefronts); // cleanup wavefronts to keep memory low
+
+        return aln.score < segment_length;
+    }
 }
 
 
@@ -353,9 +405,8 @@ char* alignmentToCigar(
     while (start_idx < edit_cigar->end_offset
            && seen_query < skip_query_start) {
         switch (edit_cigar->operations[start_idx++]) {
-        case 'M':
-        case 'X':
         case '=':
+        case 'X':
             ++skipped_target_start;
             ++seen_query;
             break;
@@ -374,9 +425,8 @@ char* alignmentToCigar(
     while (end_idx < edit_cigar->end_offset
         && seen_query < keep_query_length) {
         switch (edit_cigar->operations[end_idx++]) {
-        case 'M':
-        case 'X':
         case '=':
+        case 'X':
             ++kept_target_length;
             ++seen_query;
             break;
@@ -398,16 +448,6 @@ char* alignmentToCigar(
         if (i == end_idx || (edit_cigar->operations[i] != lastMove && lastMove != 0)) {
             // calculate matches, mismatches, insertions, deletions
             switch (lastMove) {
-            case 'I':
-                // assume that starting and ending insertions are softclips
-                if (i == end_idx || cigar->empty()) {
-                    softclips += numOfSameMoves;
-                } else {
-                    insertions += numOfSameMoves;
-                }
-                qAlignedLength += numOfSameMoves;
-                break;
-            case 'M':
             case '=':
                 matches += numOfSameMoves;
                 qAlignedLength += numOfSameMoves;
@@ -417,6 +457,15 @@ char* alignmentToCigar(
                 mismatches += numOfSameMoves;
                 qAlignedLength += numOfSameMoves;
                 refAlignedLength += numOfSameMoves;
+                break;
+            case 'I':
+                // assume that starting and ending insertions are softclips
+                if (i == end_idx || cigar->empty()) {
+                    softclips += numOfSameMoves;
+                } else {
+                    insertions += numOfSameMoves;
+                }
+                qAlignedLength += numOfSameMoves;
                 break;
             case 'D':
                 deletions += numOfSameMoves;

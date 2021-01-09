@@ -11,6 +11,7 @@
 #include "wflambda/gap_affine/affine_wavefront_align.hpp"
 #include "wflambda/gap_affine/affine_wavefront_backtrace.hpp"
 #include "dna.hpp"
+#include "rkmh.hpp"
 
 //#define WFLIGN_DEBUG true // for debugging messages
 
@@ -63,14 +64,17 @@ void wflign_affine_wavefront(
 bool do_alignment(
     const std::string& query_name,
     const char* query,
+    std::vector<rkmh::hash_t>*& query_hashes,
     const uint64_t& query_length,
     const uint64_t& j,
     const std::string& target_name,
     const char* target,
+    std::vector<rkmh::hash_t>*& target_hashes,
     const uint64_t& target_length,
     const uint64_t& i,
     const uint64_t& segment_length,
     const uint64_t& step_size,
+    const uint64_t& minhash_kmer_size,
     const int min_wavefront_length,
     const int max_distance_threshold,
     wfa::mm_allocator_t* const mm_allocator,
