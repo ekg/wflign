@@ -157,11 +157,11 @@ void wflign_affine_wavefront(
 
     // clean up sketches
     for (auto& s : query_sketches) {
-        if (s != nullptr) delete s;
+        delete s;
         s = nullptr;
     }
     for (auto& s : target_sketches) {
-        if (s != nullptr) delete s;
+        delete s;
         s = nullptr;
     }
 
