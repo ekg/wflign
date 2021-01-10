@@ -66,7 +66,7 @@ void wflign_affine_wavefront(
     std::vector<std::vector<rkmh::hash_t>*> query_sketches(pattern_length, nullptr);
     std::vector<std::vector<rkmh::hash_t>*> target_sketches(text_length, nullptr);
 
-    std::cerr << "v" << "\t" << "h" << "\t" << "score" << "\t" << "aligned" << std::endl;
+    //std::cerr << "v" << "\t" << "h" << "\t" << "score" << "\t" << "aligned" << std::endl;
 
     // setup affine WFA
     wfa::mm_allocator_t* const wfa_mm_allocator = wfa::mm_allocator_new(BUFFER_SIZE_8M);
@@ -118,7 +118,7 @@ void wflign_affine_wavefront(
                             &wfa_affine_penalties,
                             min_identity,
                             *aln);
-                    std::cerr << v << "\t" << h << "\t" << aln->score << "\t" << aligned << std::endl;
+                    //std::cerr << v << "\t" << h << "\t" << aln->score << "\t" << aligned << std::endl;
                     if (aligned) {
                         alignments[k] = aln;
                     } else {
