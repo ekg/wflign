@@ -95,6 +95,8 @@ std::vector<hash_t> hash_sequence(const char* seq,
                                   const uint64_t& sketch_size) {
     std::vector<hash_t> hashes = calc_hashes(seq, len, k);
     std::sort(hashes.begin(), hashes.end());
+    //auto last = std::unique(hashes.begin(), hashes.end());
+    //hashes.erase(last, hashes.end());
     if (hashes.size() > sketch_size) {
         hashes.erase(hashes.begin()+sketch_size, hashes.end());
     }

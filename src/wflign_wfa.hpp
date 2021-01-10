@@ -22,7 +22,10 @@ namespace wavefront {
 struct alignment_t {
     int j = 0;
     int i = 0;
+    bool ok = false;
     int score = std::numeric_limits<int>::max();
+    double mash_dist = 1;
+    double identity = 0;
     int skip_query_start = 0;
     int keep_query_length = 0;
     int skip_target_start = 0;
@@ -64,12 +67,12 @@ void wflign_affine_wavefront(
 bool do_alignment(
     const std::string& query_name,
     const char* query,
-    std::vector<rkmh::hash_t>*& query_hashes,
+    std::vector<rkmh::hash_t>*& query_sketches,
     const uint64_t& query_length,
     const uint64_t& j,
     const std::string& target_name,
     const char* target,
-    std::vector<rkmh::hash_t>*& target_hashes,
+    std::vector<rkmh::hash_t>*& target_sketches,
     const uint64_t& target_length,
     const uint64_t& i,
     const uint64_t& segment_length,
@@ -79,6 +82,7 @@ bool do_alignment(
     const int max_distance_threshold,
     wfa::mm_allocator_t* const mm_allocator,
     wfa::affine_penalties_t* const affine_penalties,
+    const float& min_identity,
     alignment_t& aln);
 
 void write_alignment(

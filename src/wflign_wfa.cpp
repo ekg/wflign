@@ -32,8 +32,9 @@ void wflign_affine_wavefront(
     const int pattern_length = query_length / step_size;
     const int text_length = target_length / step_size;
 
-    const int wfa_min_wavefront_length = 0; //50;
-    const int wfa_max_distance_threshold = 0; //segment_length / 5;
+    // use exact WFA locally
+    const int wfa_min_wavefront_length = 0;
+    const int wfa_max_distance_threshold = 0;
 
     // Allocate MM
     wflambda::mm_allocator_t* const wflambda_mm_allocator = wflambda::mm_allocator_new(BUFFER_SIZE_8M);
@@ -60,10 +61,12 @@ void wflign_affine_wavefront(
     whash::patchmap<uint64_t,alignment_t*> alignments;
 
     // allocate vectors to store our sketches
+    //whash::patchmap<uint64_t, std::vector<rkmh::hash_t>*> query_sketches;
+    //whash::patchmap<uint64_t, std::vector<rkmh::hash_t>*> target_sketches;
     std::vector<std::vector<rkmh::hash_t>*> query_sketches(pattern_length, nullptr);
     std::vector<std::vector<rkmh::hash_t>*> target_sketches(text_length, nullptr);
 
-    //std::cerr << "v" << "\t" << "h" << "\t" << "score" << "\t" << "aligned" << std::endl;
+    std::cerr << "v" << "\t" << "h" << "\t" << "score" << "\t" << "aligned" << std::endl;
 
     // setup affine WFA
     wfa::mm_allocator_t* const wfa_mm_allocator = wfa::mm_allocator_new(BUFFER_SIZE_8M);
@@ -71,9 +74,11 @@ void wflign_affine_wavefront(
         .match = 0,
         .mismatch = 4,
         .gap_opening = 6,
-        .gap_extension = 2,
+        .gap_extension = 1,
     };
-    const uint64_t minhash_kmer_size = 17;
+    const uint64_t minhash_kmer_size = 19;
+    int v_max = 0;
+    int h_max = 0;
 
     auto extend_match =
         [&](const int& v,
@@ -111,12 +116,34 @@ void wflign_affine_wavefront(
                             wfa_max_distance_threshold,
                             wfa_mm_allocator,
                             &wfa_affine_penalties,
+                            min_identity,
                             *aln);
-                    //std::cerr << v << "\t" << h << "\t" << aln->score << "\t" << aligned << std::endl;
+                    std::cerr << v << "\t" << h << "\t" << aln->score << "\t" << aligned << std::endl;
                     if (aligned) {
                         alignments[k] = aln;
                     } else {
                         delete aln;
+                    }
+                    // cleanup old sketches
+                    if (v > v_max) {
+                        v_max = v;
+                        if (v >= wflambda_max_distance_threshold) {
+                            auto& s = query_sketches[v - wflambda_max_distance_threshold];
+                            if (s != nullptr) {
+                                delete s;
+                                s = nullptr;
+                            }
+                        }
+                    }
+                    if (h > h_max) {
+                        h_max = h;
+                        if (h >= wflambda_max_distance_threshold) {
+                            auto& s = target_sketches[h - wflambda_max_distance_threshold];
+                            if (s != nullptr) {
+                                delete s;
+                                s = nullptr;
+                            }
+                        }
                     }
                 }
             }
@@ -157,12 +184,16 @@ void wflign_affine_wavefront(
 
     // clean up sketches
     for (auto& s : query_sketches) {
-        delete s;
-        s = nullptr;
+        if (s != nullptr) {
+            delete s;
+            s = nullptr;
+        }
     }
     for (auto& s : target_sketches) {
-        delete s;
-        s = nullptr;
+        if (s != nullptr) {
+            delete s;
+            s = nullptr;
+        }
     }
 
     // clean up our WFA allocator
@@ -231,6 +262,7 @@ bool do_alignment(
     const int max_distance_threshold,
     wfa::mm_allocator_t* const mm_allocator,
     wfa::affine_penalties_t* const affine_penalties,
+    const float& min_identity,
     alignment_t& aln) {
 
     // first make the sketches if we haven't yet
@@ -245,12 +277,16 @@ bool do_alignment(
 
     // first check if our mash dist is inbounds
     double mash_dist = rkmh::compare(*query_sketch, *target_sketch, minhash_kmer_size);
+    //std::cerr << "mash_dist = " << mash_dist << std::endl;
 
-    // the mash distance is generally overestimated
-    // but when it's very high we are almost certain that it's not a match
-    if (mash_dist > 0.9) {
+    int max_score = segment_length * 0.8;
+
+    // the mash distance generally underestimates the actual divergence
+    // but when it's high we are almost certain that it's not a match
+    if (mash_dist > 0.1) {
         // if it isn't, return false
-        aln.score = segment_length;
+        aln.score = max_score;
+        aln.ok = false;
         return false;
     } else {
         // if it is, we'll align
@@ -273,16 +309,30 @@ bool do_alignment(
             segment_length,
             query+j,
             segment_length,
-            segment_length);
+            max_score);
+
+        int match_count = 0;
+        for (int q = affine_wavefronts->edit_cigar.begin_offset;
+             q != affine_wavefronts->edit_cigar.end_offset; ++q) {
+            match_count += affine_wavefronts->edit_cigar.operations[q] == 'M';
+        }
+
+        //aln.identity = std::min(1.0, (double)match_count / ((double)segment_length / 2));
+        aln.identity = (double)match_count / ((double)segment_length);
+        //std::cerr << "identity is " << aln.identity << " and score " << aln.score << std::endl;
 
         aln.j = j;
         aln.i = i;
-        // copy our edit cigar
-        wflign_edit_cigar_copy(&aln.edit_cigar, &affine_wavefronts->edit_cigar);
+        aln.mash_dist = mash_dist;
+        // copy our edit cigar if we aligned
+        aln.ok = aln.score < max_score && aln.identity > min_identity;
+        if (aln.ok) {
+            wflign_edit_cigar_copy(&aln.edit_cigar, &affine_wavefronts->edit_cigar);
+        }
         // cleanup wavefronts to keep memory low
         affine_wavefronts_delete(affine_wavefronts);
 
-        return aln.score < segment_length;
+        return aln.ok;
     }
 }
 
@@ -304,8 +354,7 @@ void write_alignment(
 //    bool aligned = false;
     //Output to file
     //auto& result = aln.result;
-    //if (aln.score < 10) {
-    {
+    if (aln.ok) {
 
         /*
         if (result.status == EDLIB_STATUS_OK
@@ -361,6 +410,7 @@ void write_alignment(
                 << "\t" << std::round(float2phred(1.0-identity))
                 << "\t" << "as:i:" << aln.score
                 << "\t" << "id:f:" << identity
+                << "\t" << "md:f:" << aln.mash_dist
                 << "\t" << "ma:i:" << matches
                 << "\t" << "mm:i:" << mismatches
                 << "\t" << "ni:i:" << insertions
