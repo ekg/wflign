@@ -43,7 +43,9 @@ target_link_libraries(wflign
 add_library(libwflign_static STATIC
   src/wflign_edlib.cpp
   src/wflign_wfa.cpp
-  src/wfa_edit_callback.cpp)
+  src/wfa_edit_callback.cpp
+  src/rkmh.cpp
+  src/murmur3.cpp)
 set_target_properties(libwflign_static PROPERTIES OUTPUT_NAME "wflign")
 target_include_directories(libwflign_static PRIVATE
   deps/
