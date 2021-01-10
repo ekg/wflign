@@ -224,10 +224,11 @@ void wflign_affine_wavefront(
         pattern_length,
         text_length);
 
+#ifdef WFLIGN_DEBUG
     // get alignment score
     const int score = wflambda::edit_cigar_score_gap_affine(
         &affine_wavefronts->edit_cigar,&affine_penalties);
-#ifdef WFLIGN_DEBUG
+
     std::cerr << "[wflign::wflign_affine_wavefront] alignment score " << score << " for query: " << query_name << " target: " << target_name << std::endl;
 #endif
 
@@ -235,12 +236,11 @@ void wflign_affine_wavefront(
     // annotate each PAF record with it and the full alignment score
 
     // Trim alignments that overlap in the query
-    if (trace.size()) {
-        int last_i = 0;
-        int last_j = 0;
-        for (auto x = trace.begin(); x != trace.end(); ++x) {
-            auto& curr = **x;
-            curr.keep_query_length = segment_length;
+    if (!trace.empty()) {
+        //int last_i = 0;
+        //int last_j = 0;
+        for (auto & x : trace) {
+            (*x).keep_query_length = segment_length;
         }
         for (auto x = trace.rbegin()+1; x != trace.rend(); ++x) {
             auto& curr = **x;
