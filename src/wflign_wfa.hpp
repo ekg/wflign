@@ -55,6 +55,20 @@ struct trace_pos_t {
             return false;
         }
     }
+    bool decr(void) {
+        if (offset > edit_cigar->begin_offset) {
+            --offset;
+            switch (curr()) {
+            case 'M': case 'X': --j; --i; break;
+            case 'I': --j; break;
+            case 'D': --i; break;
+            default: break;
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
     bool at_end(void) const {
         return offset == edit_cigar->end_offset;
     }
