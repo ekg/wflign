@@ -249,8 +249,8 @@ void wflign_affine_wavefront(
                 // we want to remove any possible overlaps in query or target
                 // walk back last until we don't overlap in i or j
                 // recording the distance walked as an additional trim on last
-                while (last_pos.j >= curr_pos.j && last_pos.decr());
-                while (last_pos.i >= curr_pos.i && curr_pos.incr());
+                while (last_pos.j > curr_pos.j && last_pos.decr());
+                while (last_pos.i > curr_pos.i && curr_pos.incr());
                 trim_last = (last.j + segment_length) - last_pos.j;
                 trim_curr = curr_pos.j - curr.j;
                 // TODO the resulting alignment should be convertible to a single record
