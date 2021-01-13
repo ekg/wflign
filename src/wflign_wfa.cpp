@@ -205,23 +205,60 @@ void wflign_affine_wavefront(
 
     // Trim alignments that overlap in the query
     if (!trace.empty()) {
-        //int last_i = 0;
-        //int last_j = 0;
+        // set the keep_query_lengths TODO do this earlier
         for (auto & x : trace) {
-            (*x).keep_query_length = segment_length;
+            x->keep_query_length = segment_length;
         }
+
+        auto& b = trace.front();
+        trace_pos_t last_pos = { b->j, b->i, &trace.front()->edit_cigar, 0 };
         for (auto x = trace.rbegin()+1; x != trace.rend(); ++x) {
             auto& curr = **x;
             auto& last = **(x-1);
-            int ovlp_j = last.j + segment_length - curr.j;
-            if (ovlp_j > 0) {
-                int trim_last = ovlp_j / 2;
-                int trim_curr = ovlp_j - trim_last;
-                last.keep_query_length -= trim_last;
-                curr.keep_query_length -= trim_curr;
-                curr.skip_query_start += trim_curr;
+            trace_pos_t curr_pos = { curr.j, curr.i, &curr.edit_cigar, 0 };
+
+            // trace the last alignment until we overlap the next
+            while (last_pos.j < curr_pos.j && last_pos.incr());
+
+            // to record our match
+            trace_pos_t match;
+
+            // now they are matched at the query position
+            while (last_pos.incr() && curr_pos.incr()) {
+                if (last_pos.equal(curr_pos)) {
+                    // they equal and we can splice them at the first match
+                    match = last_pos;
+                    break;
+                }
             }
+
+            // save our current position for our next iteration
+            last_pos = curr_pos;
+
+            // if we matched, we'll be able to splice the alignments together
+            int trim_last=0, trim_curr=0;
+            if (match.assigned()) {
+                // we'll use our match position to set up the trims
+                trim_last = (last.j + segment_length) - match.j;
+                trim_curr = match.j - curr.j;
+            } else {
+                // if they are never equal, we need to split the difference in the query
+                int ovlp_j = last.j + segment_length - curr.j;
+                // if we don't overlap, no trimming needed
+                if (ovlp_j > 0) {
+                    trim_last = ovlp_j / 2;
+                    trim_curr = ovlp_j - trim_last;
+                }
+                // TODO: we should further trim cases where we overlap in target and or query
+                // beacuse these prevent us from establishing a single global alignment (our ultimate goal)
+            }
+
+            // assign our cigar trim
+            last.keep_query_length -= trim_last;
+            curr.keep_query_length -= trim_curr;
+            curr.skip_query_start += trim_curr;
         }
+
         for (auto x = trace.rbegin(); x != trace.rend(); ++x) {
             write_alignment(out, **x,
                             query_name, query_total_length, query_offset, query_length,

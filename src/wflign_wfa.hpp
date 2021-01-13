@@ -35,6 +35,43 @@ struct alignment_t {
     }
 };
 
+// link a position in a traceback matrix to its edit
+struct trace_pos_t {
+    int j = 0;
+    int i = 0;
+    wfa::edit_cigar_t* edit_cigar = nullptr;
+    int offset = 0;
+    bool incr(void) {
+        if (offset < edit_cigar->end_offset) {
+            switch (curr()) {
+            case 'M': case 'X': ++j; ++i; break;
+            case 'I': ++j; break;
+            case 'D': ++i; break;
+            default: break;
+            }
+            ++offset;
+            return true;
+        } else {
+            return false;
+        }
+    }
+    bool at_end(void) const {
+        return offset == edit_cigar->end_offset;
+    }
+    char curr(void) const {
+        assert(!at_end());
+        return edit_cigar->operations[offset];
+    }
+    bool equal(const trace_pos_t& other) const {
+        return j == other.j
+            && i == other.i
+            && curr() == other.curr();
+    }
+    bool assigned(void) const {
+        return edit_cigar != nullptr;
+    }
+};
+
 void wflign_edit_cigar_copy(
     wfa::edit_cigar_t* const edit_cigar_dst,
     wfa::edit_cigar_t* const edit_cigar_src);
