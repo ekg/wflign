@@ -62,8 +62,6 @@ void wflign_affine_wavefront(
     whash::patchmap<uint64_t,alignment_t*> alignments;
 
     // allocate vectors to store our sketches
-    //whash::patchmap<uint64_t, std::vector<rkmh::hash_t>*> query_sketches;
-    //whash::patchmap<uint64_t, std::vector<rkmh::hash_t>*> target_sketches;
     std::vector<std::vector<rkmh::hash_t>*> query_sketches(pattern_length, nullptr);
     std::vector<std::vector<rkmh::hash_t>*> target_sketches(text_length, nullptr);
 
@@ -329,11 +327,11 @@ bool do_alignment(
     double mash_dist = rkmh::compare(*query_sketch, *target_sketch, minhash_kmer_size);
     //std::cerr << "mash_dist = " << mash_dist << std::endl;
 
-    int max_score = segment_length * 0.8;
+    int max_score = segment_length * 1.1;
 
     // the mash distance generally underestimates the actual divergence
     // but when it's high we are almost certain that it's not a match
-    if (mash_dist > 0.1) {
+    if (mash_dist > 0.9) {
         // if it isn't, return false
         aln.score = max_score;
         aln.ok = false;
