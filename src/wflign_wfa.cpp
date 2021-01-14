@@ -479,7 +479,6 @@ void write_merged_alignment(
                 cigarv.push_back(c);
             }
             cigarv.push_back(cigar);
-            
             last_query_end = aln.j + query_aligned_length;
             last_target_end = aln.i + target_aligned_length;
             total_score += aln.score;
@@ -509,12 +508,6 @@ void write_merged_alignment(
         << "\t" << "ni:i:" << total_insertions
         << "\t" << "nd:i:" << total_deletions
         << "\t" << "cg:Z:";
-    /*
-    for (auto c = cigarv.begin(); c != cigarv.end(); ++c) {
-        out << *c;
-        free(*c);
-    }
-    */
     // cigar op merging
     char last_op = '\0';
     int last_len = 0;
