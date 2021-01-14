@@ -3,6 +3,8 @@
 #include <cstring>
 #include <vector>
 #include <algorithm>
+#include <cctype>
+#include <charconv>
 #include "WFA/edit/edit_cigar.hpp"
 //#include "WFA/gap_affine/affine_wavefront.hpp"
 #include "WFA/gap_affine/affine_wavefront_align.hpp"

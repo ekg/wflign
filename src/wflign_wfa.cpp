@@ -30,8 +30,8 @@ void wflign_affine_wavefront(
     uint64_t step_size = segment_length / steps_per_segment;
 
     // Pattern & Text
-    const int pattern_length = query_length / step_size + 1;
-    const int text_length = target_length / step_size + 1;
+    const int pattern_length = query_length / step_size;
+    const int text_length = target_length / step_size;
 
     // use exact WFA locally
     const int wfa_min_wavefront_length = 0;
@@ -478,18 +478,12 @@ void write_merged_alignment(
                 std::memcpy(c, x.c_str(), x.size() + 1);
                 cigarv.push_back(c);
             }
-            // TODO cigar merging
             cigarv.push_back(cigar);
             
             last_query_end = aln.j + query_aligned_length;
             last_target_end = aln.i + target_aligned_length;
             total_score += aln.score;
         }
-    }
-    std::stringstream cigarss;
-    for (auto c : cigarv) {
-        cigarss << c;
-        free(c);
     }
 
     double total = total_target_aligned_length + total_query_aligned_length;
@@ -514,8 +508,42 @@ void write_merged_alignment(
         << "\t" << "mm:i:" << total_mismatches
         << "\t" << "ni:i:" << total_insertions
         << "\t" << "nd:i:" << total_deletions
-        << "\t" << "cg:Z:" << cigarss.str() << "\n";
-    
+        << "\t" << "cg:Z:";
+    /*
+    for (auto c = cigarv.begin(); c != cigarv.end(); ++c) {
+        out << *c;
+        free(*c);
+    }
+    */
+    // cigar op merging
+    char last_op = '\0';
+    int last_len = 0;
+    for (auto _c = cigarv.begin(); _c != cigarv.end(); ++_c) {
+        char* c = *_c;
+        int l = 0;
+        int x = 0;
+        while (c[x] != '\0') {
+            while (isdigit(c[x])) ++x;
+            char op = c[x];
+            int len;
+            std::from_chars(c+l, c+x, len);
+            l = ++x;
+            if (last_len) {
+                if (last_op == op) {
+                    len += last_len;
+                } else {
+                    out << last_len << last_op;
+                }
+            }
+            last_op = op;
+            last_len = len;
+        }
+        free(c);
+    }
+    if (last_len) {
+        out << last_len << last_op;
+    }
+    out << "\n";
 }
 
 void write_alignment(
