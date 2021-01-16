@@ -139,7 +139,6 @@ void wflign_affine_wavefront(
     const uint64_t& target_offset,
     const uint64_t& target_length,
     const uint64_t& segment_length,
-    const float& min_identity,
     const int& wflambda_min_wavefront_length, // with these set at 0 we do exact WFA for wflambda
     const int& wflambda_max_distance_threshold);
     //const int& wfa_min_wavefront_length, // with these set at 0 we do exact WFA for WFA itself
@@ -163,7 +162,6 @@ bool do_alignment(
     const int max_distance_threshold,
     wfa::mm_allocator_t* const mm_allocator,
     wfa::affine_penalties_t* const affine_penalties,
-    const float& min_identity,
     alignment_t& aln);
 
 void merge_alignments(
@@ -182,7 +180,6 @@ void write_merged_alignment(
     const uint64_t& target_total_length,
     const uint64_t& target_offset,
     const uint64_t& target_length,
-    const float& min_identity,
     const bool& with_endline = true);
 
 void write_alignment(
@@ -197,8 +194,8 @@ void write_alignment(
     const uint64_t& target_total_length,
     const uint64_t& target_offset,
     const uint64_t& target_length,
-    const float& min_identity,
     const bool& with_endline = true);
+
 
 char* alignmentToCigar(
     const wfa::edit_cigar_t* const edit_cigar,
@@ -207,8 +204,9 @@ char* alignmentToCigar(
     uint64_t& matches,
     uint64_t& mismatches,
     uint64_t& insertions,
+    uint64_t& inserted_bp,
     uint64_t& deletions,
-    uint64_t& softclips);
+    uint64_t& deleted_bp);
 
 double float2phred(const double& prob);
 
