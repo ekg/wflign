@@ -24,37 +24,55 @@ namespace wavefront {
 struct alignment_t {
     int j = 0;
     int i = 0;
-    int length = 0;
+    int query_length = 0;
+    int target_length = 0;
     bool ok = false;
     int score = std::numeric_limits<int>::max();
     double mash_dist = 1;
     wfa::edit_cigar_t edit_cigar;
     void trim_front(int query_trim) {
+        // this kills the alignment
+        if (query_trim >= query_length) {
+            ok = false;
+            return;
+        }
         // increment j and i appropriately
         int trim_to_j = j + query_trim;
         int x = edit_cigar.begin_offset;
         while (x < edit_cigar.end_offset
                && j < trim_to_j) {
             switch (edit_cigar.operations[x++]) {
-            case 'M': case 'X': --length; ++j; ++i; break;
-            case 'I': --length; ++j; break;
-            case 'D': ++i; break;
+            case 'M': case 'X': --query_length; --target_length; ++j; ++i; break;
+            case 'I': --query_length; ++j; break;
+            case 'D': --target_length; ++i; break;
             default: break;
+            }
+            if (target_length <= 0 || query_length <= 0) {
+                ok = false;
+                return;
             }
         }
         if (x == edit_cigar.end_offset) ok = false;
         edit_cigar.begin_offset = x;
     }
     void trim_back(int query_trim) {
+        if (query_trim >= query_length) {
+            ok = false;
+            return;
+        }
         int x = edit_cigar.end_offset;
         int q = 0;
         while (x > edit_cigar.begin_offset
                && q < query_trim) {
             switch (edit_cigar.operations[--x]) {
-            case 'M': case 'X': --length; ++q; break;
-            case 'I': --length; ++q; break;
-            case 'D': break;
+            case 'M': case 'X': --query_length; --target_length; ++q; break;
+            case 'I': --query_length; ++q; break;
+            case 'D': --target_length; break;
             default: break;
+            }
+            if (target_length <= 0 || query_length <= 0) {
+                ok = false;
+                return;
             }
         }
         if (x == edit_cigar.begin_offset) ok = false;
@@ -199,8 +217,8 @@ void write_alignment(
 
 char* alignmentToCigar(
     const wfa::edit_cigar_t* const edit_cigar,
-    uint64_t& refAlignedLength,
-    uint64_t& qAlignedLength,
+    uint64_t& target_aligned_length,
+    uint64_t& query_aligned_length,
     uint64_t& matches,
     uint64_t& mismatches,
     uint64_t& insertions,

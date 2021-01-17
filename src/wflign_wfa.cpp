@@ -237,16 +237,20 @@ void wflign_affine_wavefront(
             int trim_last=0, trim_curr=0;
             if (match_pos.assigned()) {
                 // we'll use our match position to set up the trims
-                trim_last = (last.j + last.length) - match_pos.j;
+                trim_last = (last.j + last.query_length) - match_pos.j;
                 trim_curr = match_pos.j - curr.j;
             } else {
                 // we want to remove any possible overlaps in query or target
                 // walk back last until we don't overlap in i or j
                 // recording the distance walked as an additional trim on last
                 while (last_pos.j > curr_pos.j && last_pos.decr());
+                while (last_pos.j > curr_pos.j && curr_pos.incr());
+                while (last_pos.i > curr_pos.i && last_pos.decr());
                 while (last_pos.i > curr_pos.i && curr_pos.incr());
-                trim_last = (last.j + last.length) - last_pos.j;
-                trim_curr = curr_pos.j - curr.j;
+                trim_last = (last.j + last.query_length) - last_pos.j + 1;
+                trim_curr = curr_pos.j - curr.j + 1;
+                assert(last_pos.j <= curr_pos.j);
+                assert(last_pos.i <= curr_pos.i);
             }
 
             // assign our cigar trim
@@ -308,7 +312,8 @@ bool do_alignment(
     wfa::affine_penalties_t* const affine_penalties,
     alignment_t& aln) {
 
-    aln.length = segment_length;
+    aln.query_length = segment_length;
+    aln.target_length = segment_length;
 
     // first make the sketches if we haven't yet
     if (query_sketch == nullptr) {
@@ -402,15 +407,13 @@ void write_merged_alignment(
     uint64_t inserted_bp = 0;
     uint64_t deletions = 0;
     uint64_t deleted_bp = 0;
-    uint64_t query_start = std::numeric_limits<uint64_t>::max();
-    uint64_t target_start = std::numeric_limits<uint64_t>::max();
+    uint64_t query_start = 0;
+    uint64_t target_start = 0;
     uint64_t total_query_aligned_length = 0;
     uint64_t total_target_aligned_length = 0;
     uint64_t query_end = 0;
     uint64_t target_end = 0;
     uint64_t total_score = 0;
-    uint64_t last_query_end = 0;
-    uint64_t last_target_end = 0;
 
     double mash_dist_sum = 0;
     uint64_t ok_alns = 0;
@@ -420,19 +423,17 @@ void write_merged_alignment(
         auto& aln = **x;
 
         if (aln.ok) {
+            if (ok_alns == 0) {
+                query_start = aln.j;
+                target_start = aln.i;
+            }
+
             ++ok_alns;
 
-            /*
-            uint64_t matches = 0;
-            uint64_t mismatches = 0;
-            uint64_t insertions = 0;
-            uint64_t inserted_bp = 0;
-            uint64_t deletions = 0;
-            uint64_t deleted_bp = 0;
-            */
             uint64_t target_aligned_length = 0;
             uint64_t query_aligned_length = 0;
 
+            //std::cerr << "trace " << aln.j << " " << aln.i << std::endl;
 
             char* cigar = alignmentToCigar(&aln.edit_cigar,
                                            target_aligned_length,
@@ -444,58 +445,34 @@ void write_merged_alignment(
                                            deletions,
                                            deleted_bp);
 
-            // todo this should just be done in the alignmentToCigar function
-            // by passing these in...
-            /*
-            total_matches += matches;
-            total_mismatches += mismatches;
-            total_insertions += insertions;
-            total_inserted_bp += inserted_bp;
-            total_deletions += deletions;
-            total_deleted_bp += deleted_bp;
-            */
             mash_dist_sum += aln.mash_dist;
             total_query_aligned_length += query_aligned_length;
             total_target_aligned_length += target_aligned_length;
 
-            // what's our local start
-            uint64_t q_start;
-            if (query_is_rev) {
-                q_start = query_offset + (query_length - (aln.j + query_aligned_length));
-            } else {
-                q_start = query_offset + aln.j;
-            }
-
-            uint64_t t_start = target_offset + aln.i;
-
-            // TODO this can be done more efficiently by looking at the orientation up front
-            query_start = std::min(query_start, q_start);
-            target_start = std::min(target_start, t_start);
-            query_end = std::max(query_end, q_start + query_aligned_length);
-            target_end = std::max(target_end, t_start + target_aligned_length);
-
             // add the delta in ref and query from the last alignment
-            if (last_query_end && aln.j > last_query_end) {
+            if (query_end && aln.j > query_end) {
                 ++insertions;
-                int len = aln.j - last_query_end;
+                int len = aln.j - query_end;
                 inserted_bp += len;
                 std::string x = std::to_string(len) + "I";
                 char* c = (char*) malloc(x.size() + 1);
-                std::memcpy(c, x.c_str(), x.size() + 1);
+                std::memcpy(c, x.c_str(), x.size());
+                c[x.size()] = '\0';
                 cigarv.push_back(c);
             }
-            if (last_target_end && aln.i > last_target_end) {
+            if (target_end && aln.i > target_end) {
                 ++deletions;
-                int len = aln.i - last_target_end;
+                int len = aln.i - target_end;
                 deleted_bp += len;
                 std::string x = std::to_string(len) + "D";
                 char* c = (char*) malloc(x.size() + 1);
-                std::memcpy(c, x.c_str(), x.size() + 1);
+                std::memcpy(c, x.c_str(), x.size());
+                c[x.size()] = '\0';
                 cigarv.push_back(c);
             }
             cigarv.push_back(cigar);
-            last_query_end = aln.j + query_aligned_length;
-            last_target_end = aln.i + target_aligned_length;
+            query_end = aln.j + query_aligned_length;
+            target_end = aln.i + target_aligned_length;
             total_score += aln.score;
         }
     }
@@ -509,13 +486,13 @@ void write_merged_alignment(
 
     out << query_name
         << "\t" << query_total_length
-        << "\t" << query_start
-        << "\t" << query_end
+        << "\t" << query_offset + (query_is_rev ? query_length - query_end : query_start)
+        << "\t" << query_offset + (query_is_rev ? query_length - query_start : query_end)
         << "\t" << (query_is_rev ? "-" : "+")
         << "\t" << target_name
         << "\t" << target_total_length
-        << "\t" << target_start
-        << "\t" << target_end
+        << "\t" << target_offset + target_start
+        << "\t" << target_offset + target_end
         << "\t" << matches
         << "\t" << std::max(total_target_aligned_length, total_query_aligned_length)
         << "\t" << std::round(float2phred(1.0-block_identity))
@@ -530,6 +507,7 @@ void write_merged_alignment(
         << "\t" << "nd:i:" << deletions
         << "\t" << "dd:i:" << deleted_bp
         << "\t" << "cg:Z:";
+    ///for (auto* c : cigarv) { out << c; }
     // cigar op merging
     char last_op = '\0';
     int last_len = 0;
@@ -649,8 +627,8 @@ void write_alignment(
 
 char* alignmentToCigar(
     const wfa::edit_cigar_t* const edit_cigar,
-    uint64_t& refAlignedLength,
-    uint64_t& qAlignedLength,
+    uint64_t& target_aligned_length,
+    uint64_t& query_aligned_length,
     uint64_t& matches,
     uint64_t& mismatches,
     uint64_t& insertions,
@@ -677,23 +655,23 @@ char* alignmentToCigar(
             switch (lastMove) {
             case 'M':
                 matches += numOfSameMoves;
-                qAlignedLength += numOfSameMoves;
-                refAlignedLength += numOfSameMoves;
+                query_aligned_length += numOfSameMoves;
+                target_aligned_length += numOfSameMoves;
                 break;
             case 'X':
                 mismatches += numOfSameMoves;
-                qAlignedLength += numOfSameMoves;
-                refAlignedLength += numOfSameMoves;
+                query_aligned_length += numOfSameMoves;
+                target_aligned_length += numOfSameMoves;
                 break;
             case 'I':
                 ++insertions;
                 inserted_bp += numOfSameMoves;
-                qAlignedLength += numOfSameMoves;
+                query_aligned_length += numOfSameMoves;
                 break;
             case 'D':
                 ++deletions;
                 deleted_bp += numOfSameMoves;
-                refAlignedLength += numOfSameMoves;
+                target_aligned_length += numOfSameMoves;
                 break;
             default:
                 break;
