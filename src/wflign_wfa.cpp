@@ -168,8 +168,10 @@ void wflign_affine_wavefront(
         if (v >= 0 && h >= 0 && v < pattern_length && h < text_length) {
             const uint64_t k = encode_pair(v, h);
             auto* aln = alignments[k];
-            aln->keep = true;
-            trace.push_back(aln);
+            if (aln->ok) {
+                trace.push_back(aln);
+                aln->keep = true;
+            }
             return true;
         } else {
             return false;
@@ -220,7 +222,7 @@ void wflign_affine_wavefront(
 
     // Trim alignments that overlap in the query
     if (!trace.empty()) {
-#define VALIDATE_WFA_WFLIGN
+//#define VALIDATE_WFA_WFLIGN
 #ifdef VALIDATE_WFA_WFLIGN
         if (!trace.front()->validate(query, target)) {
             std::cerr << "first traceback is wrong" << std::endl;
@@ -228,16 +230,14 @@ void wflign_affine_wavefront(
             assert(false);
         }
 #endif
-        for (auto x = trace.rbegin()+1; x != trace.rend(); ++x) {
-            auto& curr = **x;
-            auto& last = **(x-1);
-            /*
-            std::cerr << "splicing" << std::endl;
-            std::cerr << "curr = ";
-            curr.display();
-            std::cerr << "last = ";
-            last.display();
-            */
+
+        auto x = trace.rbegin();
+        auto c = x + 1;
+        while (x != trace.rend() && c != trace.rend()) {
+            // establish our last and curr alignments to consider when trimming
+            auto& last = **x;
+            auto& curr = **c;
+
 #ifdef VALIDATE_WFA_WFLIGN
             if (curr.ok && !curr.validate(query, target)) {
                 std::cerr << "curr traceback is wrong before trimming @ " << curr.j << " " << curr.i << std::endl;
@@ -321,14 +321,23 @@ void wflign_affine_wavefront(
                 }
 #endif
             }
-            /*
-            std::cerr << "spliced" << std::endl;
-            std::cerr << "curr = ";
-            curr.display();
-            std::cerr << "last = ";
-            last.display();
-            std::cerr << std::endl;
-            */
+            if (curr.ok) {
+                x = c;
+            }
+            ++c;
+#ifdef VALIDATE_WFA_WFLIGN
+            auto distance_target = (curr.i - (last.i + last.target_length));
+            auto distance_query = (curr.j - (last.j + last.query_length));
+            if (last.ok && curr.ok && (distance_query < 0 || distance_target < 0)) {
+                std::cerr << "distance_target_query "
+                          << distance_target << " " << distance_query << std::endl;
+                std::cerr << "trimming failure at @ "
+                          << last.j << "," << last.i << " -> " << curr.j << "," << curr.i << std::endl;
+                last.display();
+                curr.display();
+                exit(1);
+            }
+#endif
         }
 
         if (merge_alignments) {
@@ -443,12 +452,8 @@ bool do_wfa_segment_alignment(
 
         // fill the alignment info if we aligned
         if (aln.ok) {
-            //aln.j = j;
-            //aln.i = i;
             aln.query_length = segment_length;
             aln.target_length = segment_length;
-            //hack_cigar(affine_wavefronts->edit_cigar, query, target, query_length, target_length, aln.j, aln.i);
-            //aln.mash_dist = mash_dist;
 #ifdef VALIDATE_WFA_WFLIGN
             if (!validate_cigar(affine_wavefronts->edit_cigar, query, target, segment_length, segment_length, aln.j, aln.i)) {
                 std::cerr << "cigar failure at alignment " << aln.j << " " << aln.i << std::endl;
@@ -858,16 +863,9 @@ void write_merged_alignment(
 #ifdef WFLIGN_DEBUG
             std::cerr << "[wflign::wflign_affine_wavefront] copying traceback" << std::endl;
 #endif
-            bool on_debug = false;
-
             for (auto x = trace.rbegin(); x != trace.rend(); ++x) {
                 auto& aln = **x;
-                on_debug = aln.j > 19516161;
-                if (on_debug) std::cerr << "on aln " << aln.j << " " << aln.i << std::endl;
                 if (aln.ok) {
-                    if (on_debug) {
-                        std::cerr << "aln is ok " << aln.j << " " << aln.i << std::endl;
-                    }
                     if (ok_alns == 0) {
                         query_start = aln.j;
                         target_start = aln.i;
@@ -875,14 +873,12 @@ void write_merged_alignment(
                     ++ok_alns;
                     if (query_end && aln.j > query_end) {
                         const int len = aln.j - query_end;
-                        if (on_debug) std::cerr << "distance from last query " << len << std::endl;
                         for (uint64_t i = 0; i < len; ++i) {
                             rawv.push_back('I');
                         }
                     }
                     if (target_end && aln.i > target_end) {
                         const int len = aln.i - target_end;
-                        if (on_debug) std::cerr << "distance from last target " << len << std::endl;
                         for (uint64_t i = 0; i < len; ++i) {
                             rawv.push_back('D');
                         }
@@ -891,14 +887,6 @@ void write_merged_alignment(
                     uint64_t query_aligned_length = 0;
                     const int start_idx = aln.edit_cigar.begin_offset;
                     const int end_idx = aln.edit_cigar.end_offset;
-                    if (on_debug) {
-                        std::cerr << "cigar ";
-                        for (int i = start_idx; i < end_idx; i++) {
-                            const auto& c = aln.edit_cigar.operations[i];
-                            std::cerr << c;
-                        }
-                        std::cerr << std::endl;
-                    }
                     for (int i = start_idx; i < end_idx; i++) {
                         const auto& c = aln.edit_cigar.operations[i];
                         switch (c) {
@@ -914,21 +902,6 @@ void write_merged_alignment(
                     target_end = aln.i + target_aligned_length;
                 }
                 // clean up
-#ifdef VALIDATE_WFA_WFLIGN
-                if (on_debug && !validate_trace(rawv, query, target, query_length, target_length_mut, query_start, target_start)) {
-                    std::cerr << "cigar failure in rawv (in process) "
-                              << "\t" << query_name
-                              << "\t" << query_total_length
-                              << "\t" << query_offset + (query_is_rev ? query_length - query_end : query_start)
-                              << "\t" << query_offset + (query_is_rev ? query_length - query_start : query_end)
-                              << "\t" << (query_is_rev ? "-" : "+")
-                              << "\t" << target_name
-                              << "\t" << target_total_length
-                              << "\t" << target_offset - target_pointer_shift + target_start
-                              << "\t" << target_offset + target_end << std::endl;
-                    exit(1);
-                }
-#endif
                 delete *x;
             }
 
@@ -989,7 +962,7 @@ void write_merged_alignment(
         exit(1);
     }
 #endif
-        
+
 #ifdef WFLIGN_DEBUG
         std::cerr << "[wflign::wflign_affine_wavefront] normalizing eroded traceback" << std::endl;
 #endif

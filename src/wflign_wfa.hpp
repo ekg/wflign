@@ -88,9 +88,9 @@ struct alignment_t {
                 return;
             }
         }
-        //while (x < edit_cigar.end_offset && edit_cigar.operations[x] == 'D') {
-        //    ++x; --target_length; ++i;
-        //}
+        while (x < edit_cigar.end_offset && edit_cigar.operations[x] == 'D') {
+            ++x; --target_length; ++i;
+        }
         if (x == edit_cigar.end_offset) ok = false;
         edit_cigar.begin_offset = x;
     }
@@ -114,9 +114,9 @@ struct alignment_t {
                 return;
             }
         }
-        //while (x >= edit_cigar.begin_offset && edit_cigar.operations[x-1] == 'D') {
-        //    --x; --target_length;
-        //}
+        while (x >= edit_cigar.begin_offset && edit_cigar.operations[x-1] == 'D') {
+            --x; --target_length;
+        }
         if (x == edit_cigar.begin_offset) ok = false;
         edit_cigar.end_offset = x;
     }
